@@ -220,9 +220,10 @@ python src/generate_data.py
 python src/check_data.py
 python src/clean_data.py
 python src/validate_data.py
-python src/load_to_postgres.py
-python src/query_postgres.py
-python src/business_analysis.py
+
+python -m src.load_to_postgres
+python -m src.query_postgres
+python -m src.business_analysis
 ```
 
 Los resultados del análisis se generan automáticamente dentro de:
