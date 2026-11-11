@@ -1,6 +1,7 @@
 import pandas as pd 
 import random
 from datetime import datetime, timedelta
+from src.paths import RAW_SALES_FILE
 
 random.seed(42)
 
@@ -106,7 +107,7 @@ print("Cantidad de registros:", len(df))
 
 
 df.to_csv(
-    "data/raw/sales_raw.csv",
+    RAW_SALES_FILE,
     index=False
 )
 

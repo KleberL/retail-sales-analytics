@@ -2,6 +2,14 @@ import pandas as pd
 import matplotlib.pyplot as plt
 
 from src.database import get_engine
+from src.paths import (
+    KPI_REPORT_FILE,
+    CITY_REPORT_FILE,
+    PRODUCT_REPORT_FILE,
+    MONTH_REPORT_FILE,
+    CITY_CHART_FILE,
+    MONTH_CHART_FILE,
+)
 
 
 engine = get_engine()
@@ -67,7 +75,7 @@ ax.bar_label(
 plt.tight_layout()
 
 plt.savefig(
-    "images/ventas_por_ciudad.png",
+    CITY_CHART_FILE,
     dpi=300
 )
 
@@ -117,7 +125,7 @@ ax.grid(
 plt.tight_layout()
 
 plt.savefig(
-    "images/ventas_mensuales.png",
+    MONTH_CHART_FILE,
     dpi=300
 )
 
@@ -185,22 +193,22 @@ print(
 )
 
 kpis.to_csv(
-    "reports/kpis_generales.csv",
+    KPI_REPORT_FILE,
     index=False
 )
 
 ventas_ciudad.to_csv(
-    "reports/ventas_por_ciudad.csv",
+    CITY_REPORT_FILE,
     index=False
 )
 
 ventas_producto.to_csv(
-    "reports/ventas_por_producto.csv",
+    PRODUCT_REPORT_FILE,
     index=False
 )
 
 ventas_mes.to_csv(
-    "reports/ventas_por_mes.csv",
+    MONTH_REPORT_FILE,
     index=False
 )
 

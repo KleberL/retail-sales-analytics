@@ -1,6 +1,7 @@
 import pandas as pd
+from src.paths import RAW_SALES_FILE, CLEAN_SALES_FILE
 
-df = pd.read_csv("data/raw/sales_raw.csv")
+df = pd.read_csv(RAW_SALES_FILE)
 
 # print("Filas antes de limpiar:", len(df))
 
@@ -91,7 +92,7 @@ columnas = [
 df = df[columnas]
 
 df.to_csv(
-    "data/processed/sales_clean.csv",
+    CLEAN_SALES_FILE,
     index=False
 )
 

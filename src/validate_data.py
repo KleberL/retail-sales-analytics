@@ -1,6 +1,7 @@
 import pandas as pd
+from src.paths import CLEAN_SALES_FILE
 
-df = pd.read_csv("data/processed/sales_clean.csv")
+df = pd.read_csv(CLEAN_SALES_FILE)
 
 print("DIMENSIONES")
 print(df.shape)

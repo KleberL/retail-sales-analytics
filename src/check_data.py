@@ -1,6 +1,7 @@
 import pandas as pd
+from src.paths import RAW_SALES_FILE
 
-df = pd.read_csv("data/raw/sales_raw.csv")
+df = pd.read_csv(RAW_SALES_FILE)
 
 print("PRIMERAS FILAS")
 print(df.head())

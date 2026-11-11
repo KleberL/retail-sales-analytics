@@ -2,6 +2,7 @@ import pandas as pd
 import psycopg
 
 from src.database import get_connection_params
+from src.paths import CLEAN_SALES_FILE
 
 
 
@@ -44,9 +45,7 @@ print("Tabla sales creada correctamente")
 
 
 # 4. Leer el dataset limpio
-df = pd.read_csv(
-    "data/processed/sales_clean.csv"
-)
+df = pd.read_csv(CLEAN_SALES_FILE)
 
 
 # 5. Renombrar las columnas para PostgreSQL

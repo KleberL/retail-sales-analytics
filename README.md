@@ -24,6 +24,7 @@ Construir un pipeline de análisis reproducible que permita:
 - Generar reportes CSV y gráficos reutilizables.
 - Mantener credenciales fuera del código.
 - Ejecutar el proyecto dentro de un entorno virtual reproducible.
+- Centralizar las rutas del proyecto utilizando `pathlib`.
 
 ---
 
@@ -117,6 +118,13 @@ Debido a que el dataset es sintético, estos resultados demuestran el proceso an
 - Variables de entorno
 - `.gitignore`
 
+### Organización del proyecto
+
+- `pathlib`
+- módulos Python
+- paquetes Python
+- entorno virtual `venv`
+
 ### Control de versiones
 
 - Git
@@ -152,6 +160,7 @@ retail-sales-analytics/
 ├── src/
 │   ├── __init__.py
 │   ├── database.py
+│   ├── paths.py
 │   ├── generate_data.py
 │   ├── check_data.py
 │   ├── clean_data.py
@@ -170,9 +179,9 @@ El directorio `.venv/` se crea localmente para el entorno virtual, pero está ex
 
 ---
 
-## Flujo del proyecto
+# Flujo del proyecto
 
-### 1. Generación de datos
+## 1. Generación de datos
 
 `generate_data.py` crea un dataset sintético de ventas con aproximadamente 500 registros.
 
@@ -192,7 +201,7 @@ data/raw/sales_raw.csv
 
 ---
 
-### 2. Control de calidad
+## 2. Control de calidad
 
 `check_data.py` realiza una inspección inicial del dataset y permite revisar:
 
@@ -204,7 +213,7 @@ data/raw/sales_raw.csv
 
 ---
 
-### 3. Limpieza y transformación
+## 3. Limpieza y transformación
 
 `clean_data.py` realiza el procesamiento principal del dataset.
 
@@ -228,7 +237,7 @@ data/processed/sales_clean.csv
 
 ---
 
-### 4. Validación
+## 4. Validación
 
 `validate_data.py` comprueba que el dataset final:
 
@@ -239,7 +248,51 @@ data/processed/sales_clean.csv
 
 ---
 
-### 5. Conexión con PostgreSQL
+## 5. Gestión centralizada de rutas
+
+Las rutas utilizadas por los diferentes módulos están centralizadas en:
+
+```text
+src/paths.py
+```
+
+El proyecto utiliza `pathlib` para construir las rutas a partir de la carpeta raíz del proyecto.
+
+Ejemplo:
+
+```python
+PROJECT_ROOT = Path(__file__).resolve().parent.parent
+
+DATA_DIR = PROJECT_ROOT / "data"
+REPORTS_DIR = PROJECT_ROOT / "reports"
+IMAGES_DIR = PROJECT_ROOT / "images"
+```
+
+Esto evita repetir rutas como:
+
+```text
+data/processed/sales_clean.csv
+```
+
+en múltiples archivos.
+
+En su lugar, los scripts importan constantes como:
+
+```python
+from src.paths import CLEAN_SALES_FILE
+```
+
+y utilizan:
+
+```python
+pd.read_csv(CLEAN_SALES_FILE)
+```
+
+Esto facilita el mantenimiento del proyecto y reduce errores relacionados con rutas escritas manualmente.
+
+---
+
+## 6. Conexión con PostgreSQL
 
 La configuración de base de datos está centralizada en:
 
@@ -256,7 +309,7 @@ De esta forma, los demás scripts no repiten la configuración de conexión.
 
 ---
 
-### 6. Carga de datos
+## 7. Carga de datos
 
 `load_to_postgres.py`:
 
@@ -273,7 +326,7 @@ retail_sales_analytics
 
 ---
 
-### 7. Análisis SQL
+## 8. Análisis SQL
 
 Las consultas principales se almacenan en:
 
@@ -291,7 +344,7 @@ El análisis incluye:
 
 ---
 
-### 8. Análisis de negocio
+## 9. Análisis de negocio
 
 `business_analysis.py` consulta PostgreSQL y automatiza la generación de:
 
@@ -327,7 +380,7 @@ Para ejecutar el proyecto se necesita:
 retail_sales_analytics
 ```
 
-Todos los comandos deben ejecutarse desde la raíz del proyecto.
+Los comandos del pipeline deben ejecutarse desde la raíz del proyecto.
 
 ---
 
@@ -447,25 +500,25 @@ Con PostgreSQL disponible, las variables configuradas y el entorno virtual activ
 ## 1. Generar los datos
 
 ```bash
-python src/generate_data.py
+python -m src.generate_data
 ```
 
 ## 2. Revisar la calidad inicial
 
 ```bash
-python src/check_data.py
+python -m src.check_data
 ```
 
 ## 3. Limpiar y transformar los datos
 
 ```bash
-python src/clean_data.py
+python -m src.clean_data
 ```
 
 ## 4. Validar el dataset procesado
 
 ```bash
-python src/validate_data.py
+python -m src.validate_data
 ```
 
 ## 5. Cargar los datos en PostgreSQL
@@ -486,11 +539,49 @@ python -m src.query_postgres
 python -m src.business_analysis
 ```
 
-Este último proceso genera automáticamente los archivos de:
+El flujo completo es:
 
 ```text
-reports/
-images/
+python -m src.generate_data
+          ↓
+python -m src.check_data
+          ↓
+python -m src.clean_data
+          ↓
+python -m src.validate_data
+          ↓
+python -m src.load_to_postgres
+          ↓
+python -m src.query_postgres
+          ↓
+python -m src.business_analysis
+```
+
+---
+
+## Archivos generados
+
+El pipeline produce los siguientes datasets:
+
+```text
+data/raw/sales_raw.csv
+data/processed/sales_clean.csv
+```
+
+El análisis genera:
+
+```text
+reports/kpis_generales.csv
+reports/ventas_por_ciudad.csv
+reports/ventas_por_producto.csv
+reports/ventas_por_mes.csv
+```
+
+Y las visualizaciones:
+
+```text
+images/ventas_por_ciudad.png
+images/ventas_mensuales.png
 ```
 
 ---
@@ -509,7 +600,7 @@ La consulta de rendimiento por producto genera resultados similares a:
 
 ---
 
-## Seguridad
+# Seguridad
 
 El proyecto evita almacenar credenciales directamente dentro del código.
 
@@ -537,7 +628,7 @@ con valores de referencia.
 
 ---
 
-## Reproducibilidad
+# Reproducibilidad
 
 El proyecto fue probado dentro de un entorno virtual limpio.
 
@@ -557,16 +648,56 @@ ejecución de módulos
 KPIs, reportes y gráficos
 ```
 
-Esta prueba permitió detectar y corregir una dependencia incompleta de `psycopg`, reemplazándola por `psycopg[binary]` para facilitar la ejecución del proyecto en otras computadoras.
+Esta prueba permitió detectar y corregir una dependencia incompleta de `psycopg`, reemplazándola por `psycopg[binary]`.
+
+También se centralizaron las rutas del proyecto mediante `pathlib`, evitando que cada módulo tenga rutas escritas manualmente.
 
 ---
 
-## Habilidades demostradas
+# Arquitectura
+
+El proyecto separa responsabilidades entre diferentes módulos:
+
+```text
+paths.py
+→ rutas y ubicaciones del proyecto
+
+database.py
+→ conexiones a PostgreSQL
+
+generate_data.py
+→ generación de datos
+
+check_data.py
+→ revisión inicial
+
+clean_data.py
+→ limpieza y transformación
+
+validate_data.py
+→ validación
+
+load_to_postgres.py
+→ carga en base de datos
+
+query_postgres.py
+→ consultas desde Python
+
+business_analysis.py
+→ KPIs, reportes, gráficos e insights
+```
+
+Esta organización reduce código duplicado y facilita futuras mejoras.
+
+---
+
+# Habilidades demostradas
 
 Este proyecto demuestra conocimientos prácticos de:
 
 - Python.
 - pandas.
+- NumPy.
 - limpieza y transformación de datos.
 - análisis exploratorio.
 - SQL.
@@ -580,15 +711,18 @@ Este proyecto demuestra conocimientos prácticos de:
 - variables de entorno.
 - manejo seguro de credenciales.
 - módulos y paquetes Python.
+- `pathlib`.
+- gestión de rutas.
 - entornos virtuales.
 - Git y GitHub.
 - documentación técnica.
+- separación de responsabilidades.
 - organización de proyectos de datos.
 - reproducibilidad de entornos.
 
 ---
 
-## Estado del proyecto
+# Estado del proyecto
 
 El proyecto continúa en desarrollo como parte de una ruta práctica de aprendizaje en análisis de datos, ciencia de datos e ingeniería de software.
 
@@ -596,7 +730,7 @@ Las siguientes mejoras se incorporarán progresivamente a medida que avance el p
 
 ---
 
-## Autor
+# Autor
 
 **Kleber Landívar**
 
