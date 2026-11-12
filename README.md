@@ -24,7 +24,9 @@ Construir un pipeline de análisis reproducible que permita:
 - Generar reportes CSV y gráficos reutilizables.
 - Mantener credenciales fuera del código.
 - Ejecutar el proyecto dentro de un entorno virtual reproducible.
-- Centralizar las rutas del proyecto utilizando `pathlib`.
+- Centralizar las rutas del proyecto mediante `pathlib`.
+- Validar la configuración antes de conectarse a PostgreSQL.
+- Manejar errores de conexión y liberar recursos correctamente.
 
 ---
 
@@ -81,58 +83,60 @@ Debido a que el dataset es sintético, estos resultados demuestran el proceso an
 
 ---
 
-## Visualizaciones
+# Visualizaciones
 
-### Venta total por ciudad
+## Venta total por ciudad
 
 ![Venta total por ciudad](images/ventas_por_ciudad.png)
 
-### Evolución mensual de ventas
+## Evolución mensual de ventas
 
 ![Evolución mensual de ventas](images/ventas_mensuales.png)
 
 ---
 
-## Tecnologías utilizadas
+# Tecnologías utilizadas
 
-### Lenguajes y análisis
+## Lenguajes y análisis
 
 - Python 3.11
 - SQL
 - pandas
 - NumPy
 
-### Base de datos
+## Base de datos
 
 - PostgreSQL
 - psycopg
 - SQLAlchemy
 
-### Visualización
+## Visualización
 
 - Matplotlib
 
-### Configuración y seguridad
+## Configuración y seguridad
 
 - python-dotenv
 - Variables de entorno
 - `.gitignore`
 
-### Organización del proyecto
+## Organización del proyecto
 
 - `pathlib`
 - módulos Python
 - paquetes Python
 - entorno virtual `venv`
+- separación de responsabilidades
+- manejo de excepciones
 
-### Control de versiones
+## Control de versiones
 
 - Git
 - GitHub
 
 ---
 
-## Estructura del proyecto
+# Estructura del proyecto
 
 ```text
 retail-sales-analytics/
@@ -185,7 +189,7 @@ El directorio `.venv/` se crea localmente para el entorno virtual, pero está ex
 
 `generate_data.py` crea un dataset sintético de ventas con aproximadamente 500 registros.
 
-Además introduce intencionalmente algunos problemas de calidad para simular situaciones reales:
+Además introduce intencionalmente problemas controlados de calidad para simular situaciones reales:
 
 - valores nulos,
 - registros duplicados,
@@ -256,7 +260,7 @@ Las rutas utilizadas por los diferentes módulos están centralizadas en:
 src/paths.py
 ```
 
-El proyecto utiliza `pathlib` para construir las rutas a partir de la carpeta raíz del proyecto.
+El proyecto utiliza `pathlib` para construir rutas a partir de la carpeta raíz.
 
 Ejemplo:
 
@@ -268,31 +272,27 @@ REPORTS_DIR = PROJECT_ROOT / "reports"
 IMAGES_DIR = PROJECT_ROOT / "images"
 ```
 
-Esto evita repetir rutas como:
+Esto evita repetir rutas manuales en diferentes archivos.
 
-```text
-data/processed/sales_clean.csv
+En lugar de escribir:
+
+```python
+pd.read_csv("data/processed/sales_clean.csv")
 ```
 
-en múltiples archivos.
-
-En su lugar, los scripts importan constantes como:
+los módulos utilizan:
 
 ```python
 from src.paths import CLEAN_SALES_FILE
+
+df = pd.read_csv(CLEAN_SALES_FILE)
 ```
 
-y utilizan:
-
-```python
-pd.read_csv(CLEAN_SALES_FILE)
-```
-
-Esto facilita el mantenimiento del proyecto y reduce errores relacionados con rutas escritas manualmente.
+Esto facilita el mantenimiento y reduce errores relacionados con rutas.
 
 ---
 
-## 6. Conexión con PostgreSQL
+## 6. Configuración de PostgreSQL
 
 La configuración de base de datos está centralizada en:
 
@@ -300,23 +300,66 @@ La configuración de base de datos está centralizada en:
 src/database.py
 ```
 
-Este módulo contiene funciones reutilizables para crear conexiones con:
+El módulo se encarga de:
 
-- SQLAlchemy
-- psycopg
+- cargar las variables desde `.env`,
+- validar la configuración,
+- crear conexiones mediante SQLAlchemy,
+- proporcionar parámetros para psycopg.
 
-De esta forma, los demás scripts no repiten la configuración de conexión.
+El flujo es:
+
+```text
+.env
+ ↓
+get_db_config()
+ ↓
+validación
+ ↓
+get_engine()
+o
+get_connection_params()
+```
 
 ---
 
-## 7. Carga de datos
+## 7. Validación de configuración
+
+Antes de crear una conexión, `database.py` comprueba que las variables necesarias tengan un valor válido.
+
+Las variables requeridas son:
+
+```text
+DB_NAME
+DB_USER
+DB_PASSWORD
+DB_HOST
+DB_PORT
+```
+
+Si alguna falta o está vacía, el programa genera un error claro.
+
+Ejemplo:
+
+```text
+RuntimeError: Faltan variables de entorno: port
+```
+
+Esto evita que el programa continúe hasta producir errores menos claros dentro de PostgreSQL o SQLAlchemy.
+
+---
+
+## 8. Carga de datos a PostgreSQL
 
 `load_to_postgres.py`:
 
+- obtiene la configuración validada,
+- crea una conexión mediante psycopg,
 - crea la tabla `sales` si no existe,
-- elimina los registros anteriores antes de una carga completa,
-- inserta las 500 filas procesadas,
-- confirma los cambios mediante una transacción.
+- elimina los datos de la carga anterior,
+- carga las 500 filas procesadas,
+- confirma los cambios mediante una transacción,
+- cierra correctamente los recursos utilizados.
 
 La información se almacena en la base de datos:
 
@@ -326,7 +369,65 @@ retail_sales_analytics
 
 ---
 
-## 8. Análisis SQL
+## 9. Manejo de errores
+
+La carga de datos utiliza:
+
+```text
+try
+except
+finally
+```
+
+para controlar errores de PostgreSQL y garantizar el cierre de recursos.
+
+Flujo general:
+
+```text
+try
+→ intenta conectarse
+→ crea el cursor
+→ ejecuta operaciones SQL
+→ carga los datos
+
+except
+→ captura errores de PostgreSQL
+→ muestra información del error
+→ vuelve a propagar el error
+
+finally
+→ cierra el cursor si fue creado
+→ cierra la conexión si fue creada
+```
+
+Ejemplo simplificado:
+
+```python
+conexion = None
+cursor = None
+
+try:
+    conexion = psycopg.connect(**parametros)
+    cursor = conexion.cursor()
+
+except psycopg.Error as error:
+    print("Error de PostgreSQL:")
+    print(error)
+    raise
+
+finally:
+    if cursor is not None:
+        cursor.close()
+
+    if conexion is not None:
+        conexion.close()
+```
+
+Este enfoque evita dejar conexiones abiertas si ocurre un error durante una operación.
+
+---
+
+## 10. Análisis SQL
 
 Las consultas principales se almacenan en:
 
@@ -344,7 +445,7 @@ El análisis incluye:
 
 ---
 
-## 9. Análisis de negocio
+## 11. Análisis de negocio
 
 `business_analysis.py` consulta PostgreSQL y automatiza la generación de:
 
@@ -380,7 +481,7 @@ Para ejecutar el proyecto se necesita:
 retail_sales_analytics
 ```
 
-Los comandos del pipeline deben ejecutarse desde la raíz del proyecto.
+Los comandos deben ejecutarse desde la raíz del proyecto.
 
 ---
 
@@ -429,7 +530,7 @@ Luego volver a ejecutar:
 .\.venv\Scripts\Activate.ps1
 ```
 
-El cambio mediante `-Scope Process` solo afecta la sesión actual de PowerShell.
+El cambio realizado mediante `-Scope Process` solo afecta la sesión actual de PowerShell.
 
 ### Windows CMD
 
@@ -559,16 +660,16 @@ python -m src.business_analysis
 
 ---
 
-## Archivos generados
+# Archivos generados
 
-El pipeline produce los siguientes datasets:
+El pipeline produce:
 
 ```text
 data/raw/sales_raw.csv
 data/processed/sales_clean.csv
 ```
 
-El análisis genera:
+Los reportes:
 
 ```text
 reports/kpis_generales.csv
@@ -586,9 +687,7 @@ images/ventas_mensuales.png
 
 ---
 
-## Ejemplo de resultados
-
-La consulta de rendimiento por producto genera resultados similares a:
+# Ejemplo de resultados
 
 | Producto | Unidades | Venta total | Cumplimiento promedio |
 |---|---:|---:|---:|
@@ -641,44 +740,46 @@ pip install -r requirements.txt
       ↓
 configuración de .env
       ↓
+validación de variables
+      ↓
 conexión PostgreSQL
       ↓
-ejecución de módulos
+ejecución del pipeline
       ↓
 KPIs, reportes y gráficos
 ```
 
 Esta prueba permitió detectar y corregir una dependencia incompleta de `psycopg`, reemplazándola por `psycopg[binary]`.
 
-También se centralizaron las rutas del proyecto mediante `pathlib`, evitando que cada módulo tenga rutas escritas manualmente.
+También se centralizaron las rutas mediante `pathlib` y se agregaron validaciones para detectar configuraciones incompletas antes de conectarse a PostgreSQL.
 
 ---
 
 # Arquitectura
 
-El proyecto separa responsabilidades entre diferentes módulos:
+El proyecto separa responsabilidades entre módulos:
 
 ```text
 paths.py
 → rutas y ubicaciones del proyecto
 
 database.py
-→ conexiones a PostgreSQL
+→ configuración, validación y conexiones PostgreSQL
 
 generate_data.py
 → generación de datos
 
 check_data.py
-→ revisión inicial
+→ revisión inicial de calidad
 
 clean_data.py
 → limpieza y transformación
 
 validate_data.py
-→ validación
+→ validación del dataset procesado
 
 load_to_postgres.py
-→ carga en base de datos
+→ carga de datos y manejo de errores PostgreSQL
 
 query_postgres.py
 → consultas desde Python
@@ -704,16 +805,21 @@ Este proyecto demuestra conocimientos prácticos de:
 - PostgreSQL.
 - integración Python–PostgreSQL.
 - SQLAlchemy.
+- psycopg.
 - creación de KPIs.
 - análisis de negocio.
 - automatización de reportes.
 - visualización con Matplotlib.
 - variables de entorno.
+- validación de configuración.
 - manejo seguro de credenciales.
 - módulos y paquetes Python.
 - `pathlib`.
-- gestión de rutas.
+- gestión centralizada de rutas.
 - entornos virtuales.
+- `try`, `except` y `finally`.
+- manejo de excepciones.
+- liberación de recursos.
 - Git y GitHub.
 - documentación técnica.
 - separación de responsabilidades.

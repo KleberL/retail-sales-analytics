@@ -5,30 +5,46 @@ from sqlalchemy import create_engine
 from sqlalchemy.engine import URL
 
 
-def get_engine():
+def get_db_config():
     load_dotenv()
 
-    url = URL.create(
-        drivername="postgresql+psycopg",
-        username=os.getenv("DB_USER"),
-        password=os.getenv("DB_PASSWORD"),
-        host=os.getenv("DB_HOST"),
-        port=int(os.getenv("DB_PORT")),
-        database=os.getenv("DB_NAME")
-    )
-
-    engine = create_engine(url)
-
-    return engine
-
-
-def get_connection_params():
-    load_dotenv()
-
-    return {
+    config = {
         "dbname": os.getenv("DB_NAME"),
         "user": os.getenv("DB_USER"),
         "password": os.getenv("DB_PASSWORD"),
         "host": os.getenv("DB_HOST"),
-        "port": os.getenv("DB_PORT")
+        "port": os.getenv("DB_PORT"),
     }
+
+    missing = [
+        name
+        for name, value in config.items()
+        if value is None or not value.strip()
+    ]
+
+    if missing:
+        raise RuntimeError(
+            "Faltan variables de entorno: "
+            + ", ".join(missing)
+        )
+
+    return config
+
+
+def get_engine():
+    config = get_db_config()
+
+    url = URL.create(
+        drivername="postgresql+psycopg",
+        username=config["user"],
+        password=config["password"],
+        host=config["host"],
+        port=int(config["port"]),
+        database=config["dbname"],
+    )
+
+    return create_engine(url)
+
+
+def get_connection_params():
+    return get_db_config()

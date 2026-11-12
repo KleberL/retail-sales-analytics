@@ -5,52 +5,44 @@ from src.database import get_connection_params
 from src.paths import CLEAN_SALES_FILE
 
 
-
-# 1. Conectarse a PostgreSQL
 parametros = get_connection_params()
 
-conexion = psycopg.connect(**parametros)
+conexion = None
+cursor = None
 
-print("Conexión exitosa")
+try:
+    conexion = psycopg.connect(**parametros)
+    print("Conexión exitosa")
 
+    cursor = conexion.cursor()
 
-# 2. Crear cursor para ejecutar SQL
-cursor = conexion.cursor()
+    cursor.execute("""
+        CREATE TABLE IF NOT EXISTS sales (
+            fecha DATE,
+            anio INTEGER,
+            mes INTEGER,
+            ciudad VARCHAR(50),
+            tienda VARCHAR(50),
+            supervisor VARCHAR(100),
+            producto VARCHAR(50),
+            precio INTEGER,
+            unidades INTEGER,
+            target INTEGER,
+            inventario INTEGER,
+            venta_total INTEGER,
+            cumplimiento NUMERIC(10,2),
+            cumple_target INTEGER,
+            cobertura INTEGER
+        );
+    """)
 
+    conexion.commit()
 
-# 3. Crear la tabla si todavía no existe
-cursor.execute("""
-CREATE TABLE IF NOT EXISTS sales (
-    fecha DATE,
-    anio INTEGER,
-    mes INTEGER,
-    ciudad VARCHAR(50),
-    tienda VARCHAR(50),
-    supervisor VARCHAR(100),
-    producto VARCHAR(50),
-    precio INTEGER,
-    unidades INTEGER,
-    target INTEGER,
-    inventario INTEGER,
-    venta_total INTEGER,
-    cumplimiento NUMERIC(10,2),
-    cumple_target INTEGER,
-    cobertura INTEGER
-);
-""")
+    print("Tabla sales creada correctamente")
 
-conexion.commit()
+    df = pd.read_csv(CLEAN_SALES_FILE)
 
-print("Tabla sales creada correctamente")
-
-
-# 4. Leer el dataset limpio
-df = pd.read_csv(CLEAN_SALES_FILE)
-
-
-# 5. Renombrar las columnas para PostgreSQL
-df = df.rename(
-    columns={
+    df = df.rename(columns={
         "Fecha": "fecha",
         "Año": "anio",
         "Mes": "mes",
@@ -66,55 +58,52 @@ df = df.rename(
         "Cumplimiento": "cumplimiento",
         "Cumple_Target": "cumple_target",
         "Cobertura": "cobertura"
-    }
-)
+    })
 
+    cursor.execute("""
+        DELETE FROM sales;
+    """)
 
-# 6. Vaciar la tabla antes de volver a cargar datos
-cursor.execute("DELETE FROM sales;")
+    for _, fila in df.iterrows():
+        cursor.execute("""
+            INSERT INTO sales (
+                fecha,
+                anio,
+                mes,
+                ciudad,
+                tienda,
+                supervisor,
+                producto,
+                precio,
+                unidades,
+                target,
+                inventario,
+                venta_total,
+                cumplimiento,
+                cumple_target,
+                cobertura
+            )
+            VALUES (
+                %s, %s, %s, %s, %s,
+                %s, %s, %s, %s, %s,
+                %s, %s, %s, %s, %s
+            );
+        """, tuple(fila))
 
+    conexion.commit()
 
-# 7. Insertar las filas del DataFrame en PostgreSQL
-for _, fila in df.iterrows():
+    print("Datos cargados correctamente")
+    print(f"Filas cargadas: {len(df)}")
 
-    cursor.execute(
-        """
-        INSERT INTO sales (
-            fecha,
-            anio,
-            mes,
-            ciudad,
-            tienda,
-            supervisor,
-            producto,
-            precio,
-            unidades,
-            target,
-            inventario,
-            venta_total,
-            cumplimiento,
-            cumple_target,
-            cobertura
-        )
-        VALUES (
-            %s, %s, %s, %s, %s,
-            %s, %s, %s, %s, %s,
-            %s, %s, %s, %s, %s
-        );
-        """,
-        tuple(fila)
-    )
+except psycopg.Error as error:
+    print("Error de PostgreSQL:")
+    print(error)
+    raise
 
+finally:
+    if cursor is not None:
+        cursor.close()
 
-# 8. Confirmar los INSERT
-conexion.commit()
-
-print("Datos cargados correctamente")
-print("Filas cargadas:", len(df))
-
-
-# 9. Cerrar cursor y conexión
-cursor.close()
-conexion.close()
-
-print("Conexión cerrada")
+    if conexion is not None:
+        conexion.close()
+        print("Conexión cerrada")
