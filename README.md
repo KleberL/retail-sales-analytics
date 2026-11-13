@@ -2,13 +2,13 @@
 
 Proyecto end-to-end de análisis de datos para un negocio minorista ficticio, enfocado en ventas, cumplimiento de objetivos e inventario.
 
-El proyecto cubre un flujo completo de datos: generación de información sintética, control de calidad, limpieza con Python y pandas, almacenamiento en PostgreSQL, análisis con SQL, cálculo de KPIs, generación de reportes y creación automatizada de visualizaciones.
+El proyecto cubre un flujo completo de datos: generación de información sintética, control de calidad, limpieza con Python y pandas, almacenamiento en PostgreSQL, análisis con SQL, cálculo de KPIs, generación de reportes, creación automatizada de visualizaciones y pruebas automáticas de calidad y configuración.
 
 > **Nota:** todos los datos utilizados son sintéticos y fueron generados exclusivamente con fines educativos y de portafolio. No contienen información real de empresas, clientes o personas.
 
 ---
 
-## Objetivo
+# Objetivo
 
 Construir un pipeline de análisis reproducible que permita:
 
@@ -27,10 +27,11 @@ Construir un pipeline de análisis reproducible que permita:
 - Centralizar las rutas del proyecto mediante `pathlib`.
 - Validar la configuración antes de conectarse a PostgreSQL.
 - Manejar errores de conexión y liberar recursos correctamente.
+- Validar automáticamente rutas, configuración y calidad de datos mediante tests.
 
 ---
 
-## Pipeline de datos
+# Pipeline de datos
 
 ```text
 Datos sintéticos
@@ -52,11 +53,13 @@ Python + SQLAlchemy
 KPIs e insights
       ↓
 Reportes CSV + visualizaciones
+      ↓
+Pruebas automáticas
 ```
 
 ---
 
-## KPIs principales
+# KPIs principales
 
 | KPI | Resultado |
 |---|---:|
@@ -67,7 +70,7 @@ Reportes CSV + visualizaciones
 
 ---
 
-## Principales insights
+# Principales insights
 
 - **Manta** presenta la mayor venta total: **$133,830**.
 - **Nova Pro** es el producto con mayor venta total: **$180,160**.
@@ -117,7 +120,7 @@ Debido a que el dataset es sintético, estos resultados demuestran el proceso an
 ## Configuración y seguridad
 
 - python-dotenv
-- Variables de entorno
+- variables de entorno
 - `.gitignore`
 
 ## Organización del proyecto
@@ -128,6 +131,13 @@ Debido a que el dataset es sintético, estos resultados demuestran el proceso an
 - entorno virtual `venv`
 - separación de responsabilidades
 - manejo de excepciones
+
+## Testing
+
+- `unittest`
+- `unittest.mock`
+- assertions
+- pruebas de calidad de datos
 
 ## Control de versiones
 
@@ -172,6 +182,12 @@ retail-sales-analytics/
 │   ├── load_to_postgres.py
 │   ├── query_postgres.py
 │   └── business_analysis.py
+│
+├── tests/
+│   ├── __init__.py
+│   ├── test_paths.py
+│   ├── test_database.py
+│   └── test_data_quality.py
 │
 ├── .env.example
 ├── .gitignore
@@ -302,7 +318,7 @@ src/database.py
 
 El módulo se encarga de:
 
-- cargar las variables desde `.env`,
+- cargar variables desde `.env`,
 - validar la configuración,
 - crear conexiones mediante SQLAlchemy,
 - proporcionar parámetros para psycopg.
@@ -462,6 +478,184 @@ Los resultados se almacenan automáticamente en:
 ```text
 reports/
 images/
+```
+
+---
+
+# Pruebas automáticas
+
+El proyecto utiliza `unittest`, incluido en la biblioteca estándar de Python, para comprobar automáticamente diferentes partes del pipeline.
+
+Actualmente existen **10 tests automáticos**.
+
+Los tests están ubicados en:
+
+```text
+tests/
+```
+
+y están divididos en tres grupos principales.
+
+---
+
+## Tests de rutas
+
+Archivo:
+
+```text
+tests/test_paths.py
+```
+
+Comprueba:
+
+- que la raíz del proyecto exista,
+- que las carpetas de datos existan,
+- que las carpetas de reportes e imágenes existan,
+- que `sales_raw.csv` exista,
+- que `sales_clean.csv` exista.
+
+Ejemplo:
+
+```python
+self.assertTrue(PROJECT_ROOT.exists())
+```
+
+---
+
+## Tests de configuración
+
+Archivo:
+
+```text
+tests/test_database.py
+```
+
+Comprueba:
+
+- que `get_db_config()` genere correctamente la configuración esperada,
+- que una variable inválida produzca un `RuntimeError`,
+- que la validación funcione sin modificar el `.env` real.
+
+El proyecto utiliza:
+
+```python
+from unittest.mock import patch
+```
+
+para reemplazar temporalmente `os.getenv()` durante los tests.
+
+Ejemplo:
+
+```python
+@patch("src.database.os.getenv")
+```
+
+Esto permite simular variables como:
+
+```text
+DB_PORT=" "
+```
+
+sin cambiar la configuración real del usuario.
+
+También se utiliza:
+
+```python
+with self.assertRaises(RuntimeError):
+```
+
+para comprobar que el código rechace correctamente una configuración inválida.
+
+---
+
+## Tests de calidad de datos
+
+Archivo:
+
+```text
+tests/test_data_quality.py
+```
+
+Comprueba automáticamente que `sales_clean.csv`:
+
+- tenga exactamente 500 registros,
+- no contenga valores nulos,
+- no contenga registros duplicados,
+- tenga las 15 columnas esperadas,
+- conserve el orden esperado de las columnas.
+
+El dataset se carga una sola vez para toda la clase mediante:
+
+```python
+@classmethod
+def setUpClass(cls):
+    cls.df = pd.read_csv(CLEAN_SALES_FILE)
+```
+
+Esto evita leer el mismo archivo repetidamente para cada test.
+
+---
+
+## Ejecutar todos los tests
+
+Desde la raíz del proyecto:
+
+```bash
+python -m unittest discover -s tests -v
+```
+
+Resultado actual:
+
+```text
+Ran 10 tests
+
+OK
+```
+
+Un resultado `OK` significa que todas las condiciones verificadas actualmente se cumplen.
+
+---
+
+## Assertions utilizadas
+
+El proyecto utiliza assertions como:
+
+```python
+self.assertTrue(...)
+self.assertEqual(...)
+self.assertIn(...)
+self.assertRaises(...)
+```
+
+Estas permiten comparar el resultado real con el resultado esperado.
+
+Ejemplo:
+
+```python
+self.assertEqual(
+    total_nulls,
+    0
+)
+```
+
+significa que el dataset procesado debe contener exactamente cero valores nulos.
+
+---
+
+## FAIL vs ERROR
+
+En `unittest` existen diferencias importantes entre ambos resultados.
+
+```text
+FAIL
+→ el test pudo ejecutarse
+→ pero el resultado no fue el esperado
+```
+
+```text
+ERROR
+→ ocurrió un problema durante la ejecución del test
+→ y la comprobación no pudo completarse normalmente
 ```
 
 ---
@@ -640,7 +834,13 @@ python -m src.query_postgres
 python -m src.business_analysis
 ```
 
-El flujo completo es:
+## 8. Ejecutar los tests automáticos
+
+```bash
+python -m unittest discover -s tests -v
+```
+
+El flujo general queda:
 
 ```text
 python -m src.generate_data
@@ -656,6 +856,8 @@ python -m src.load_to_postgres
 python -m src.query_postgres
           ↓
 python -m src.business_analysis
+          ↓
+python -m unittest discover -s tests -v
 ```
 
 ---
@@ -747,11 +949,13 @@ conexión PostgreSQL
 ejecución del pipeline
       ↓
 KPIs, reportes y gráficos
+      ↓
+tests automáticos
 ```
 
 Esta prueba permitió detectar y corregir una dependencia incompleta de `psycopg`, reemplazándola por `psycopg[binary]`.
 
-También se centralizaron las rutas mediante `pathlib` y se agregaron validaciones para detectar configuraciones incompletas antes de conectarse a PostgreSQL.
+También se centralizaron las rutas mediante `pathlib`, se agregaron validaciones para detectar configuraciones incompletas antes de conectarse a PostgreSQL y se incorporaron tests para comprobar automáticamente componentes importantes del proyecto.
 
 ---
 
@@ -786,9 +990,12 @@ query_postgres.py
 
 business_analysis.py
 → KPIs, reportes, gráficos e insights
+
+tests/
+→ validación automática del proyecto
 ```
 
-Esta organización reduce código duplicado y facilita futuras mejoras.
+Esta organización reduce código duplicado, mejora el mantenimiento y facilita futuras mejoras.
 
 ---
 
@@ -820,6 +1027,11 @@ Este proyecto demuestra conocimientos prácticos de:
 - `try`, `except` y `finally`.
 - manejo de excepciones.
 - liberación de recursos.
+- pruebas automáticas con `unittest`.
+- assertions.
+- `unittest.mock.patch`.
+- mocking de variables de entorno.
+- validación automatizada de calidad de datos.
 - Git y GitHub.
 - documentación técnica.
 - separación de responsabilidades.
