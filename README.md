@@ -2,7 +2,7 @@
 
 Proyecto end-to-end de análisis de datos para un negocio minorista ficticio, enfocado en ventas, cumplimiento de objetivos e inventario.
 
-El proyecto cubre un flujo completo de datos: generación de información sintética, control de calidad, limpieza con Python y pandas, almacenamiento en PostgreSQL, análisis con SQL, cálculo de KPIs, generación de reportes, creación automatizada de visualizaciones y pruebas automáticas de calidad y configuración.
+El proyecto cubre un flujo completo de datos: generación de información sintética, control de calidad, limpieza con Python y pandas, almacenamiento en PostgreSQL, análisis con SQL, cálculo de KPIs, generación de reportes, creación automatizada de visualizaciones, pruebas automáticas y ejecución integral del pipeline mediante un solo comando.
 
 > **Nota:** todos los datos utilizados son sintéticos y fueron generados exclusivamente con fines educativos y de portafolio. No contienen información real de empresas, clientes o personas.
 
@@ -28,6 +28,8 @@ Construir un pipeline de análisis reproducible que permita:
 - Validar la configuración antes de conectarse a PostgreSQL.
 - Manejar errores de conexión y liberar recursos correctamente.
 - Validar automáticamente rutas, configuración y calidad de datos mediante tests.
+- Ejecutar todo el pipeline automáticamente con un solo comando.
+- Detener la ejecución si una etapa crítica falla.
 
 ---
 
@@ -55,6 +57,12 @@ KPIs e insights
 Reportes CSV + visualizaciones
       ↓
 Pruebas automáticas
+```
+
+El flujo completo también puede ejecutarse mediante:
+
+```bash
+python -m src.run_pipeline
 ```
 
 ---
@@ -139,6 +147,13 @@ Debido a que el dataset es sintético, estos resultados demuestran el proceso an
 - assertions
 - pruebas de calidad de datos
 
+## Automatización
+
+- `subprocess`
+- `sys.executable`
+- códigos de salida
+- orquestación de procesos
+
 ## Control de versiones
 
 - Git
@@ -181,7 +196,8 @@ retail-sales-analytics/
 │   ├── validate_data.py
 │   ├── load_to_postgres.py
 │   ├── query_postgres.py
-│   └── business_analysis.py
+│   ├── business_analysis.py
+│   └── run_pipeline.py
 │
 ├── tests/
 │   ├── __init__.py
@@ -482,6 +498,258 @@ images/
 
 ---
 
+# Ejecución automatizada del pipeline
+
+El proyecto incluye un orquestador en:
+
+```text
+src/run_pipeline.py
+```
+
+Este módulo permite ejecutar el pipeline completo con un solo comando:
+
+```bash
+python -m src.run_pipeline
+```
+
+El proceso ejecuta automáticamente:
+
+```text
+Generación de datos
+        ↓
+Control de calidad inicial
+        ↓
+Limpieza y transformación
+        ↓
+Validación
+        ↓
+Carga a PostgreSQL
+        ↓
+Consulta de PostgreSQL
+        ↓
+Análisis de negocio
+        ↓
+Tests automáticos
+```
+
+---
+
+## Uso de subprocess
+
+El pipeline utiliza el módulo estándar:
+
+```python
+import subprocess
+```
+
+para ejecutar cada etapa como un proceso independiente.
+
+Cada comando se encuentra definido dentro de una lista de pasos.
+
+Ejemplo:
+
+```python
+STEPS = [
+    (
+        "Generar datos",
+        [sys.executable, "-m", "src.generate_data"],
+    ),
+]
+```
+
+Esto permite asociar:
+
+```text
+nombre de etapa
+        +
+comando que debe ejecutarse
+```
+
+---
+
+## Uso de sys.executable
+
+En lugar de utilizar simplemente:
+
+```text
+python
+```
+
+el pipeline utiliza:
+
+```python
+sys.executable
+```
+
+Esto permite utilizar exactamente el mismo intérprete de Python con el que se inició el proyecto.
+
+Si el entorno virtual está activo:
+
+```text
+(.venv)
+```
+
+`sys.executable` utilizará el Python de ese entorno virtual.
+
+Esto mejora la reproducibilidad y reduce problemas relacionados con múltiples instalaciones de Python.
+
+---
+
+## Directorio de ejecución
+
+Cada proceso se ejecuta utilizando:
+
+```python
+cwd=PROJECT_ROOT
+```
+
+Ejemplo:
+
+```python
+subprocess.run(
+    command,
+    cwd=PROJECT_ROOT,
+    check=True,
+)
+```
+
+Esto garantiza que cada módulo se ejecute desde la raíz del proyecto.
+
+`PROJECT_ROOT` se obtiene desde:
+
+```text
+src/paths.py
+```
+
+---
+
+## Detección de errores
+
+La opción:
+
+```python
+check=True
+```
+
+hace que `subprocess` detecte cuando un proceso termina con un código distinto de cero.
+
+En términos generales:
+
+```text
+0
+→ ejecución correcta
+
+1 u otro valor distinto de 0
+→ ocurrió un error
+```
+
+Si una etapa falla, Python genera:
+
+```python
+subprocess.CalledProcessError
+```
+
+---
+
+## Manejo de fallos del pipeline
+
+`run_pipeline.py` captura los errores mediante:
+
+```python
+try:
+    subprocess.run(
+        command,
+        cwd=PROJECT_ROOT,
+        check=True,
+    )
+
+except subprocess.CalledProcessError as error:
+    ...
+```
+
+Cuando una etapa falla, el pipeline:
+
+- detecta el error,
+- identifica la etapa,
+- muestra el código de salida,
+- detiene las etapas posteriores.
+
+Ejemplo:
+
+```text
+============================================================
+PIPELINE DETENIDO
+============================================================
+Etapa con error: Prueba de fallo
+Código de salida: 1
+```
+
+Después utiliza:
+
+```python
+sys.exit(error.returncode)
+```
+
+para finalizar el proceso principal con el mismo código de error.
+
+Esto evita que etapas posteriores trabajen con datos incompletos o incorrectos.
+
+---
+
+## Validación del manejo de errores
+
+Durante el desarrollo se realizó una prueba controlada utilizando:
+
+```python
+sys.exit(1)
+```
+
+para simular una etapa fallida.
+
+El pipeline detectó correctamente el fallo y se detuvo antes de ejecutar las etapas siguientes.
+
+Esto permitió comprobar que:
+
+```text
+etapa falla
+     ↓
+check=True detecta el problema
+     ↓
+CalledProcessError
+     ↓
+except captura el error
+     ↓
+se identifica la etapa
+     ↓
+pipeline detenido
+```
+
+---
+
+## Ejecución correcta
+
+Cuando todas las etapas finalizan correctamente, el resultado final incluye:
+
+```text
+Ran 10 tests
+
+OK
+
+============================================================
+PIPELINE COMPLETADO CORRECTAMENTE
+============================================================
+```
+
+De esta forma, todo el flujo principal puede ejecutarse mediante:
+
+```bash
+python -m src.run_pipeline
+```
+
+en lugar de ejecutar manualmente cada script.
+
+---
+
 # Pruebas automáticas
 
 El proyecto utiliza `unittest`, incluido en la biblioteca estándar de Python, para comprobar automáticamente diferentes partes del pipeline.
@@ -718,7 +986,7 @@ Si PowerShell bloquea la ejecución de `Activate.ps1`, puede habilitarse tempora
 Set-ExecutionPolicy -Scope Process -ExecutionPolicy Bypass
 ```
 
-Luego volver a ejecutar:
+Luego:
 
 ```powershell
 .\.venv\Scripts\Activate.ps1
@@ -790,57 +1058,75 @@ El archivo `.env` está incluido en `.gitignore` y **no debe subirse a GitHub**.
 
 # Ejecución
 
-Con PostgreSQL disponible, las variables configuradas y el entorno virtual activo, ejecutar el pipeline desde la raíz del proyecto.
+Existen dos formas de ejecutar el proyecto.
 
-## 1. Generar los datos
+---
+
+## Ejecución recomendada
+
+Con PostgreSQL disponible, las variables configuradas y el entorno virtual activo:
+
+```bash
+python -m src.run_pipeline
+```
+
+Este comando ejecuta automáticamente todo el flujo principal.
+
+---
+
+## Ejecución manual
+
+También es posible ejecutar cada etapa individualmente.
+
+### 1. Generar los datos
 
 ```bash
 python -m src.generate_data
 ```
 
-## 2. Revisar la calidad inicial
+### 2. Revisar la calidad inicial
 
 ```bash
 python -m src.check_data
 ```
 
-## 3. Limpiar y transformar los datos
+### 3. Limpiar y transformar los datos
 
 ```bash
 python -m src.clean_data
 ```
 
-## 4. Validar el dataset procesado
+### 4. Validar el dataset procesado
 
 ```bash
 python -m src.validate_data
 ```
 
-## 5. Cargar los datos en PostgreSQL
+### 5. Cargar los datos en PostgreSQL
 
 ```bash
 python -m src.load_to_postgres
 ```
 
-## 6. Ejecutar una consulta desde Python
+### 6. Ejecutar una consulta desde Python
 
 ```bash
 python -m src.query_postgres
 ```
 
-## 7. Generar el análisis de negocio
+### 7. Generar el análisis de negocio
 
 ```bash
 python -m src.business_analysis
 ```
 
-## 8. Ejecutar los tests automáticos
+### 8. Ejecutar los tests automáticos
 
 ```bash
 python -m unittest discover -s tests -v
 ```
 
-El flujo general queda:
+El flujo manual completo es:
 
 ```text
 python -m src.generate_data
@@ -858,6 +1144,12 @@ python -m src.query_postgres
 python -m src.business_analysis
           ↓
 python -m unittest discover -s tests -v
+```
+
+El mismo proceso puede ejecutarse automáticamente mediante:
+
+```text
+python -m src.run_pipeline
 ```
 
 ---
@@ -944,9 +1236,9 @@ configuración de .env
       ↓
 validación de variables
       ↓
-conexión PostgreSQL
-      ↓
 ejecución del pipeline
+      ↓
+PostgreSQL
       ↓
 KPIs, reportes y gráficos
       ↓
@@ -955,7 +1247,13 @@ tests automáticos
 
 Esta prueba permitió detectar y corregir una dependencia incompleta de `psycopg`, reemplazándola por `psycopg[binary]`.
 
-También se centralizaron las rutas mediante `pathlib`, se agregaron validaciones para detectar configuraciones incompletas antes de conectarse a PostgreSQL y se incorporaron tests para comprobar automáticamente componentes importantes del proyecto.
+También se:
+
+- centralizaron las rutas mediante `pathlib`,
+- agregaron validaciones para configuraciones incompletas,
+- incorporaron tests automáticos,
+- automatizó la ejecución del pipeline completo,
+- agregó detección de fallos entre procesos.
 
 ---
 
@@ -990,6 +1288,9 @@ query_postgres.py
 
 business_analysis.py
 → KPIs, reportes, gráficos e insights
+
+run_pipeline.py
+→ automatización y orquestación del pipeline completo
 
 tests/
 → validación automática del proyecto
@@ -1032,6 +1333,12 @@ Este proyecto demuestra conocimientos prácticos de:
 - `unittest.mock.patch`.
 - mocking de variables de entorno.
 - validación automatizada de calidad de datos.
+- automatización de pipelines.
+- `subprocess`.
+- `sys.executable`.
+- códigos de salida de procesos.
+- manejo de fallos entre procesos.
+- orquestación de tareas.
 - Git y GitHub.
 - documentación técnica.
 - separación de responsabilidades.
@@ -1044,7 +1351,20 @@ Este proyecto demuestra conocimientos prácticos de:
 
 El proyecto continúa en desarrollo como parte de una ruta práctica de aprendizaje en análisis de datos, ciencia de datos e ingeniería de software.
 
-Las siguientes mejoras se incorporarán progresivamente a medida que avance el proyecto.
+Actualmente el proyecto cuenta con:
+
+- pipeline completo de datos,
+- almacenamiento en PostgreSQL,
+- análisis SQL,
+- KPIs,
+- visualizaciones,
+- reportes automatizados,
+- configuración segura,
+- manejo de errores,
+- pruebas automáticas,
+- ejecución integral mediante un solo comando.
+
+Las siguientes mejoras se incorporarán progresivamente antes del cierre definitivo de la versión de portafolio.
 
 ---
 
