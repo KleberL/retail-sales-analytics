@@ -1,8 +1,10 @@
 # Retail Sales & Inventory Analytics
 
+![Tests](https://github.com/KleberL/retail-sales-analytics/actions/workflows/tests.yml/badge.svg)
+
 Proyecto end-to-end de análisis de datos para un negocio minorista ficticio, enfocado en ventas, cumplimiento de objetivos e inventario.
 
-El proyecto cubre un flujo completo de datos: generación de información sintética, control de calidad, limpieza con Python y pandas, almacenamiento en PostgreSQL, análisis con SQL, cálculo de KPIs, generación de reportes, creación automatizada de visualizaciones, pruebas automáticas y ejecución integral del pipeline mediante un solo comando.
+El proyecto cubre un flujo completo de datos: generación de información sintética, control de calidad, limpieza con Python y pandas, almacenamiento en PostgreSQL, análisis con SQL, cálculo de KPIs, generación de reportes, creación automatizada de visualizaciones, pruebas automáticas, ejecución integral del pipeline mediante un solo comando e integración continua con GitHub Actions.
 
 > **Nota:** todos los datos utilizados son sintéticos y fueron generados exclusivamente con fines educativos y de portafolio. No contienen información real de empresas, clientes o personas.
 
@@ -30,6 +32,7 @@ Construir un pipeline de análisis reproducible que permita:
 - Validar automáticamente rutas, configuración y calidad de datos mediante tests.
 - Ejecutar todo el pipeline automáticamente con un solo comando.
 - Detener la ejecución si una etapa crítica falla.
+- Ejecutar automáticamente los tests en GitHub después de cada `push` o Pull Request hacia `main`.
 
 ---
 
@@ -154,6 +157,13 @@ Debido a que el dataset es sintético, estos resultados demuestran el proceso an
 - códigos de salida
 - orquestación de procesos
 
+## Integración continua
+
+- GitHub Actions
+- workflows YAML
+- ejecución automática de tests
+- runners Ubuntu
+
 ## Control de versiones
 
 - Git
@@ -165,6 +175,10 @@ Debido a que el dataset es sintético, estos resultados demuestran el proceso an
 
 ```text
 retail-sales-analytics/
+│
+├── .github/
+│   └── workflows/
+│       └── tests.yml
 │
 ├── data/
 │   ├── raw/
@@ -928,6 +942,125 @@ ERROR
 
 ---
 
+# Integración continua
+
+El proyecto utiliza **GitHub Actions** para ejecutar automáticamente la suite de pruebas cada vez que se realiza un `push` o un Pull Request hacia la rama `main`.
+
+El workflow está definido en:
+
+```text
+.github/workflows/tests.yml
+```
+
+El proceso de integración continua realiza automáticamente:
+
+```text
+Push / Pull Request
+        ↓
+GitHub Actions
+        ↓
+Máquina Ubuntu temporal
+        ↓
+Python 3.11
+        ↓
+Instalación de dependencias
+        ↓
+Ejecución de unittest
+        ↓
+Tests OK ✅ / Tests fallidos ❌
+```
+
+El workflow utiliza:
+
+```yaml
+on:
+  push:
+    branches:
+      - main
+
+  pull_request:
+    branches:
+      - main
+```
+
+Esto significa que los tests se ejecutan automáticamente cuando:
+
+- se realiza un `push` hacia `main`,
+- se crea o actualiza un Pull Request dirigido a `main`.
+
+---
+
+## Entorno utilizado por GitHub Actions
+
+El workflow utiliza:
+
+```yaml
+runs-on: ubuntu-latest
+```
+
+GitHub crea una máquina virtual temporal con Ubuntu para ejecutar los tests.
+
+Esto permite comprobar que el proyecto funciona en un entorno diferente e independiente de la computadora utilizada durante el desarrollo.
+
+---
+
+## Configuración de Python
+
+GitHub Actions configura Python 3.11 mediante:
+
+```yaml
+- name: Configurar Python
+  uses: actions/setup-python@v7
+  with:
+    python-version: "3.11"
+    cache: "pip"
+```
+
+Esto mantiene la misma versión principal de Python utilizada durante el desarrollo local.
+
+La caché de `pip` puede reutilizar dependencias entre ejecuciones y reducir el tiempo necesario para preparar el entorno.
+
+---
+
+## Instalación automática de dependencias
+
+GitHub Actions ejecuta:
+
+```bash
+python -m pip install --upgrade pip
+python -m pip install -r requirements.txt
+```
+
+De esta manera, el entorno temporal instala las dependencias declaradas por el proyecto antes de ejecutar los tests.
+
+---
+
+## Ejecución automática de tests
+
+La suite se ejecuta mediante:
+
+```bash
+python -m unittest discover -s tests -v
+```
+
+Actualmente el proyecto cuenta con **10 tests automáticos**.
+
+El primer workflow ejecutado desde GitHub Actions finalizó correctamente, confirmando que los tests también funcionan en un entorno Ubuntu limpio.
+
+---
+
+## Estado visible del proyecto
+
+El README incluye un badge:
+
+```markdown
+![Tests](https://github.com/KleberL/retail-sales-analytics/actions/workflows/tests.yml/badge.svg)
+```
+
+Este indicador permite ver rápidamente el estado del workflow de tests desde la página principal del repositorio.
+
+---
+
 # Instalación
 
 ## Requisitos previos
@@ -1219,22 +1352,22 @@ El repositorio público solo incluye:
 
 con valores de referencia.
 
+El workflow de GitHub Actions tampoco requiere la contraseña local de PostgreSQL para ejecutar los tests actuales, ya que las pruebas de configuración utilizan mocking.
+
 ---
 
 # Reproducibilidad
 
-El proyecto fue probado dentro de un entorno virtual limpio.
+El proyecto fue probado dentro de un entorno virtual limpio y posteriormente dentro de GitHub Actions.
 
-El flujo validado fue:
+El flujo validado es:
 
 ```text
-Nuevo .venv
+Nuevo entorno
       ↓
 pip install -r requirements.txt
       ↓
-configuración de .env
-      ↓
-validación de variables
+configuración
       ↓
 ejecución del pipeline
       ↓
@@ -1243,17 +1376,20 @@ PostgreSQL
 KPIs, reportes y gráficos
       ↓
 tests automáticos
+      ↓
+GitHub Actions
 ```
 
-Esta prueba permitió detectar y corregir una dependencia incompleta de `psycopg`, reemplazándola por `psycopg[binary]`.
+Durante el desarrollo se:
 
-También se:
-
+- corrigió una dependencia incompleta de `psycopg`, reemplazándola por `psycopg[binary]`,
 - centralizaron las rutas mediante `pathlib`,
 - agregaron validaciones para configuraciones incompletas,
 - incorporaron tests automáticos,
 - automatizó la ejecución del pipeline completo,
-- agregó detección de fallos entre procesos.
+- agregó detección de fallos entre procesos,
+- configuró integración continua con GitHub Actions,
+- validó la suite de tests en un runner Ubuntu independiente.
 
 ---
 
@@ -1294,6 +1430,9 @@ run_pipeline.py
 
 tests/
 → validación automática del proyecto
+
+.github/workflows/tests.yml
+→ integración continua y ejecución automática de tests
 ```
 
 Esta organización reduce código duplicado, mejora el mantenimiento y facilita futuras mejoras.
@@ -1339,6 +1478,12 @@ Este proyecto demuestra conocimientos prácticos de:
 - códigos de salida de procesos.
 - manejo de fallos entre procesos.
 - orquestación de tareas.
+- integración continua (CI).
+- GitHub Actions.
+- workflows YAML.
+- runners de GitHub.
+- automatización de tests en GitHub.
+- validación del proyecto en entornos limpios.
 - Git y GitHub.
 - documentación técnica.
 - separación de responsabilidades.
@@ -1362,7 +1507,9 @@ Actualmente el proyecto cuenta con:
 - configuración segura,
 - manejo de errores,
 - pruebas automáticas,
-- ejecución integral mediante un solo comando.
+- ejecución integral mediante un solo comando,
+- integración continua con GitHub Actions,
+- validación automática de tests después de cada `push` hacia `main`.
 
 Las siguientes mejoras se incorporarán progresivamente antes del cierre definitivo de la versión de portafolio.
 
