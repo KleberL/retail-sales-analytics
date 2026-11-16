@@ -1,5 +1,6 @@
 import subprocess
 import sys
+import time
 
 from src.paths import PROJECT_ROOT
 
@@ -28,6 +29,8 @@ STEPS = [
 
 
 def run_pipeline():
+    start_time = time.perf_counter()
+
     print("=" * 60)
     print("INICIANDO PIPELINE")
     print("=" * 60)
@@ -43,17 +46,23 @@ def run_pipeline():
             )
 
         except subprocess.CalledProcessError as error:
+            elapsed_time = time.perf_counter() - start_time
+
             print("\n" + "=" * 60)
             print("PIPELINE DETENIDO")
             print("=" * 60)
             print(f"Etapa con error: {name}")
             print(f"Código de salida: {error.returncode}")
+            print(f"Tiempo transcurrido: {elapsed_time:.2f} segundos")
 
             sys.exit(error.returncode)
+
+    elapsed_time = time.perf_counter() - start_time
 
     print("\n" + "=" * 60)
     print("PIPELINE COMPLETADO CORRECTAMENTE")
     print("=" * 60)
+    print(f"Tiempo total: {elapsed_time:.2f} segundos")
 
 
 if __name__ == "__main__":
