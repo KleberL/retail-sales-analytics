@@ -1,6 +1,6 @@
-producto,unidades_totales,venta_total,cumplimiento_promedio
-Nova Pro,563,180160,74.63
-Nova X2,506,116560,71.88
-Pulse A2,486,97200,83.82
-Nova X1,510,91800,70.56
-Pulse A1,578,86700,74.18
+producto,unidades,venta_total,cumplimiento_promedio
+Nova Pro,404,129280,58.52
+Nova X1,481,87840,66.8
+Nova X2,368,84640,61.82
+Pulse A2,407,81400,63.31
+Pulse A1,524,78600,58.25

@@ -2,9 +2,9 @@
 
 ![Tests](https://github.com/KleberL/retail-sales-analytics/actions/workflows/tests.yml/badge.svg)
 
-Proyecto end-to-end de análisis de datos para un negocio minorista ficticio, enfocado en ventas, cumplimiento de objetivos e inventario.
+Proyecto end-to-end de análisis de datos para un negocio minorista ficticio, enfocado en ventas, cumplimiento de objetivos, inventario y cobertura comercial.
 
-El proyecto cubre un flujo completo de datos: generación de información sintética, control de calidad, limpieza con Python y pandas, almacenamiento en PostgreSQL, análisis con SQL, cálculo de KPIs, generación de reportes, creación automatizada de visualizaciones, pruebas automáticas, ejecución integral del pipeline mediante un solo comando e integración continua con GitHub Actions.
+El proyecto cubre un flujo completo de datos: generación de información sintética, control de calidad, limpieza con Python y pandas, almacenamiento en PostgreSQL, análisis con SQL, cálculo de KPIs, generación de reportes, creación automatizada de visualizaciones, pruebas automáticas, ejecución integral del pipeline e integración continua con GitHub Actions.
 
 > **Nota:** todos los datos utilizados son sintéticos y fueron generados exclusivamente con fines educativos y de portafolio. No contienen información real de empresas, clientes o personas.
 
@@ -15,9 +15,11 @@ El proyecto cubre un flujo completo de datos: generación de información sinté
 Construir un pipeline de análisis reproducible que permita:
 
 - Generar datos de ventas ficticios con problemas controlados de calidad.
+- Simular tiendas con ventas e inventarios iguales a cero.
 - Detectar valores nulos, duplicados e inconsistencias.
 - Limpiar y transformar información con pandas.
 - Calcular métricas derivadas de ventas, cumplimiento y cobertura.
+- Evaluar cobertura comercial de forma realista.
 - Almacenar los datos procesados en PostgreSQL.
 - Ejecutar análisis mediante SQL.
 - Consultar PostgreSQL desde Python.
@@ -32,7 +34,9 @@ Construir un pipeline de análisis reproducible que permita:
 - Validar automáticamente rutas, configuración y calidad de datos mediante tests.
 - Ejecutar todo el pipeline automáticamente con un solo comando.
 - Detener la ejecución si una etapa crítica falla.
+- Medir el tiempo total de ejecución del pipeline.
 - Ejecutar automáticamente los tests en GitHub después de cada `push` o Pull Request hacia `main`.
+- Trabajar con ramas y Pull Requests antes de integrar cambios a `main`.
 
 ---
 
@@ -60,6 +64,8 @@ KPIs e insights
 Reportes CSV + visualizaciones
       ↓
 Pruebas automáticas
+      ↓
+GitHub Actions
 ```
 
 El flujo completo también puede ejecutarse mediante:
@@ -74,26 +80,128 @@ python -m src.run_pipeline
 
 | KPI | Resultado |
 |---|---:|
-| Unidades vendidas | 2,643 |
-| Venta total | $572,420 |
-| Cumplimiento promedio | 74.67% |
-| Registros que cumplen el target | 28.60% |
+| Unidades vendidas | 2,184 |
+| Venta total | $461,760 |
+| Cumplimiento promedio | 61.69% |
+| Registros que cumplen el target | 23.40% |
+| Cobertura general | 93.80% |
 
 ---
 
 # Principales insights
 
-- **Manta** presenta la mayor venta total: **$133,830**.
-- **Nova Pro** es el producto con mayor venta total: **$180,160**.
+- **Guayaquil** presenta la mayor venta total: **$103,760**.
+- **Nova Pro** es el producto con mayor venta total: **$129,280**.
 - **Pulse A1** registra el mayor volumen de unidades vendidas.
-- **Pulse A2** presenta el mayor cumplimiento promedio entre los productos: **83.82%**.
-- **Machala** registra el mayor cumplimiento promedio entre las ciudades: **77.44%**.
-- **Agosto** es el mes con mayor venta: **$68,850**.
-- **Abril** es el mes con menor venta: **$28,760**.
+- **Manta** presenta la mayor cobertura promedio: **98.17%**.
+- **Agosto** es el mes con mayor venta: **$61,390**.
+- **Septiembre** es el mes con menor venta: **$21,480**.
+- La cobertura general del dataset es de **93.80%**.
 
-La ciudad con mayor volumen de ventas no necesariamente es la que presenta mayor cumplimiento de objetivos, lo que demuestra la importancia de analizar diferentes KPIs antes de evaluar desempeño.
+Los resultados cambiaron respecto a versiones anteriores del proyecto porque el generador ahora permite registros con cero ventas y cero inventario.
+
+Esto produce KPIs más realistas y evita que la cobertura quede artificialmente cercana al 100%.
 
 Debido a que el dataset es sintético, estos resultados demuestran el proceso analítico y no deben interpretarse como tendencias reales de mercado.
+
+---
+
+# Lógica de cobertura
+
+La cobertura representa si un registro tiene presencia comercial mediante ventas o inventario.
+
+La regla utilizada es:
+
+```text
+Unidades > 0
+O
+Inventario > 0
+        ↓
+Cobertura = 1
+```
+
+Solo existe falta de cobertura cuando:
+
+```text
+Unidades = 0
+Y
+Inventario = 0
+        ↓
+Cobertura = 0
+```
+
+Ejemplos:
+
+```text
+Unidades = 0
+Inventario = 8
+→ Cobertura = 1
+```
+
+```text
+Unidades = 4
+Inventario = 0
+→ Cobertura = 1
+```
+
+```text
+Unidades = 0
+Inventario = 0
+→ Cobertura = 0
+```
+
+En el dataset actual:
+
+```text
+Cobertura = 0 → 31 registros
+Cobertura = 1 → 469 registros
+Total         → 500 registros
+```
+
+Por tanto:
+
+```text
+Cobertura general = 469 / 500
+Cobertura general = 93.80%
+```
+
+---
+
+# Generación realista de ventas e inventario
+
+Anteriormente las unidades vendidas se generaban siempre entre:
+
+```text
+1 y 10
+```
+
+Eso provocaba que todos los registros tuvieran ventas y, por tanto, la cobertura fuera prácticamente siempre igual a 1.
+
+La lógica actual permite ventas iguales a cero:
+
+```python
+units = (
+    0
+    if random.random() < 0.20
+    else random.randint(1, 10)
+)
+```
+
+Esto genera aproximadamente un **20% de probabilidad** de tener cero unidades vendidas.
+
+El inventario utiliza:
+
+```python
+inventory = (
+    0
+    if random.random() < 0.30
+    else random.randint(1, 20)
+)
+```
+
+Esto genera aproximadamente un **30% de probabilidad** de inventario igual a cero.
+
+La combinación de ambas condiciones permite crear registros sin cobertura de forma natural.
 
 ---
 
@@ -149,11 +257,13 @@ Debido a que el dataset es sintético, estos resultados demuestran el proceso an
 - `unittest.mock`
 - assertions
 - pruebas de calidad de datos
+- validación de reglas de negocio
 
 ## Automatización
 
 - `subprocess`
 - `sys.executable`
+- `time.perf_counter`
 - códigos de salida
 - orquestación de procesos
 
@@ -168,6 +278,9 @@ Debido a que el dataset es sintético, estos resultados demuestran el proceso an
 
 - Git
 - GitHub
+- ramas
+- Pull Requests
+- merge
 
 ---
 
@@ -233,7 +346,7 @@ El directorio `.venv/` se crea localmente para el entorno virtual, pero está ex
 
 ## 1. Generación de datos
 
-`generate_data.py` crea un dataset sintético de ventas con aproximadamente 500 registros.
+`generate_data.py` crea un dataset sintético de ventas con 500 registros base.
 
 Además introduce intencionalmente problemas controlados de calidad para simular situaciones reales:
 
@@ -243,7 +356,21 @@ Además introduce intencionalmente problemas controlados de calidad para simular
 - diferencias entre mayúsculas y minúsculas,
 - inconsistencias en nombres.
 
-El resultado inicial se almacena en:
+También genera condiciones comerciales más realistas:
+
+- aproximadamente 20% de probabilidad de tener cero ventas,
+- aproximadamente 30% de probabilidad de tener inventario igual a cero.
+
+Después se agregan 5 duplicados intencionales.
+
+El resultado inicial contiene:
+
+```text
+505 filas
+9 columnas
+```
+
+y se almacena en:
 
 ```text
 data/raw/sales_raw.csv
@@ -279,7 +406,14 @@ Entre las transformaciones se incluyen:
 - creación de indicador de cumplimiento de target,
 - creación de indicador de cobertura.
 
-El dataset procesado se almacena en:
+El dataset procesado final contiene:
+
+```text
+500 filas
+15 columnas
+```
+
+y se almacena en:
 
 ```text
 data/processed/sales_clean.csv
@@ -487,6 +621,7 @@ El análisis incluye:
 - ventas por producto,
 - unidades vendidas,
 - cumplimiento promedio,
+- cobertura,
 - comportamiento mensual.
 
 ---
@@ -496,12 +631,26 @@ El análisis incluye:
 `business_analysis.py` consulta PostgreSQL y automatiza la generación de:
 
 - KPIs generales,
+- cobertura general,
 - ranking de ciudades,
+- cobertura promedio por ciudad,
 - ranking de productos,
 - ventas mensuales,
 - mejores y peores resultados,
 - reportes CSV,
 - visualizaciones.
+
+El KPI de cobertura general se calcula mediante:
+
+```sql
+ROUND(AVG(cobertura) * 100, 2) AS cobertura_general
+```
+
+La cobertura por ciudad utiliza:
+
+```sql
+ROUND(AVG(cobertura) * 100, 2) AS cobertura_promedio
+```
 
 Los resultados se almacenan automáticamente en:
 
@@ -548,9 +697,39 @@ Tests automáticos
 
 ---
 
+## Medición del tiempo
+
+El pipeline utiliza:
+
+```python
+time.perf_counter()
+```
+
+para medir cuánto tarda la ejecución completa.
+
+Ejemplo:
+
+```python
+start_time = time.perf_counter()
+
+# Pipeline
+
+elapsed_time = time.perf_counter() - start_time
+```
+
+Al finalizar muestra:
+
+```text
+Tiempo total: 10.60 segundos
+```
+
+Si una etapa falla, también puede mostrar cuánto tiempo transcurrió antes del error.
+
+---
+
 ## Uso de subprocess
 
-El pipeline utiliza el módulo estándar:
+El pipeline utiliza:
 
 ```python
 import subprocess
@@ -558,26 +737,19 @@ import subprocess
 
 para ejecutar cada etapa como un proceso independiente.
 
-Cada comando se encuentra definido dentro de una lista de pasos.
-
 Ejemplo:
 
 ```python
-STEPS = [
-    (
-        "Generar datos",
-        [sys.executable, "-m", "src.generate_data"],
-    ),
-]
+subprocess.run(
+    command,
+    cwd=PROJECT_ROOT,
+    check=True,
+)
 ```
 
-Esto permite asociar:
+`cwd=PROJECT_ROOT` garantiza que los comandos se ejecuten desde la raíz del proyecto.
 
-```text
-nombre de etapa
-        +
-comando que debe ejecutarse
-```
+`check=True` permite detectar automáticamente procesos que terminan con error.
 
 ---
 
@@ -595,7 +767,7 @@ el pipeline utiliza:
 sys.executable
 ```
 
-Esto permite utilizar exactamente el mismo intérprete de Python con el que se inició el proyecto.
+Esto permite utilizar exactamente el mismo intérprete con el que se inició el proyecto.
 
 Si el entorno virtual está activo:
 
@@ -603,180 +775,44 @@ Si el entorno virtual está activo:
 (.venv)
 ```
 
-`sys.executable` utilizará el Python de ese entorno virtual.
-
-Esto mejora la reproducibilidad y reduce problemas relacionados con múltiples instalaciones de Python.
-
----
-
-## Directorio de ejecución
-
-Cada proceso se ejecuta utilizando:
-
-```python
-cwd=PROJECT_ROOT
-```
-
-Ejemplo:
-
-```python
-subprocess.run(
-    command,
-    cwd=PROJECT_ROOT,
-    check=True,
-)
-```
-
-Esto garantiza que cada módulo se ejecute desde la raíz del proyecto.
-
-`PROJECT_ROOT` se obtiene desde:
-
-```text
-src/paths.py
-```
-
----
-
-## Detección de errores
-
-La opción:
-
-```python
-check=True
-```
-
-hace que `subprocess` detecte cuando un proceso termina con un código distinto de cero.
-
-En términos generales:
-
-```text
-0
-→ ejecución correcta
-
-1 u otro valor distinto de 0
-→ ocurrió un error
-```
-
-Si una etapa falla, Python genera:
-
-```python
-subprocess.CalledProcessError
-```
+se utilizará el Python del entorno virtual.
 
 ---
 
 ## Manejo de fallos del pipeline
 
-`run_pipeline.py` captura los errores mediante:
+Cuando una etapa falla, el pipeline captura:
 
 ```python
-try:
-    subprocess.run(
-        command,
-        cwd=PROJECT_ROOT,
-        check=True,
-    )
-
-except subprocess.CalledProcessError as error:
-    ...
+subprocess.CalledProcessError
 ```
 
-Cuando una etapa falla, el pipeline:
-
-- detecta el error,
-- identifica la etapa,
-- muestra el código de salida,
-- detiene las etapas posteriores.
-
-Ejemplo:
+y muestra:
 
 ```text
 ============================================================
 PIPELINE DETENIDO
 ============================================================
-Etapa con error: Prueba de fallo
+Etapa con error: nombre_etapa
 Código de salida: 1
+Tiempo transcurrido: X.XX segundos
 ```
 
-Después utiliza:
-
-```python
-sys.exit(error.returncode)
-```
-
-para finalizar el proceso principal con el mismo código de error.
-
-Esto evita que etapas posteriores trabajen con datos incompletos o incorrectos.
-
----
-
-## Validación del manejo de errores
-
-Durante el desarrollo se realizó una prueba controlada utilizando:
-
-```python
-sys.exit(1)
-```
-
-para simular una etapa fallida.
-
-El pipeline detectó correctamente el fallo y se detuvo antes de ejecutar las etapas siguientes.
-
-Esto permitió comprobar que:
-
-```text
-etapa falla
-     ↓
-check=True detecta el problema
-     ↓
-CalledProcessError
-     ↓
-except captura el error
-     ↓
-se identifica la etapa
-     ↓
-pipeline detenido
-```
-
----
-
-## Ejecución correcta
-
-Cuando todas las etapas finalizan correctamente, el resultado final incluye:
-
-```text
-Ran 10 tests
-
-OK
-
-============================================================
-PIPELINE COMPLETADO CORRECTAMENTE
-============================================================
-```
-
-De esta forma, todo el flujo principal puede ejecutarse mediante:
-
-```bash
-python -m src.run_pipeline
-```
-
-en lugar de ejecutar manualmente cada script.
+Esto evita que etapas posteriores continúen trabajando con datos incompletos o incorrectos.
 
 ---
 
 # Pruebas automáticas
 
-El proyecto utiliza `unittest`, incluido en la biblioteca estándar de Python, para comprobar automáticamente diferentes partes del pipeline.
+El proyecto utiliza `unittest`, incluido en la biblioteca estándar de Python.
 
-Actualmente existen **10 tests automáticos**.
+Actualmente existen **12 tests automáticos**.
 
 Los tests están ubicados en:
 
 ```text
 tests/
 ```
-
-y están divididos en tres grupos principales.
 
 ---
 
@@ -796,12 +832,6 @@ Comprueba:
 - que `sales_raw.csv` exista,
 - que `sales_clean.csv` exista.
 
-Ejemplo:
-
-```python
-self.assertTrue(PROJECT_ROOT.exists())
-```
-
 ---
 
 ## Tests de configuración
@@ -818,35 +848,13 @@ Comprueba:
 - que una variable inválida produzca un `RuntimeError`,
 - que la validación funcione sin modificar el `.env` real.
 
-El proyecto utiliza:
+Utiliza:
 
 ```python
 from unittest.mock import patch
 ```
 
-para reemplazar temporalmente `os.getenv()` durante los tests.
-
-Ejemplo:
-
-```python
-@patch("src.database.os.getenv")
-```
-
-Esto permite simular variables como:
-
-```text
-DB_PORT=" "
-```
-
-sin cambiar la configuración real del usuario.
-
-También se utiliza:
-
-```python
-with self.assertRaises(RuntimeError):
-```
-
-para comprobar que el código rechace correctamente una configuración inválida.
+para simular variables de entorno.
 
 ---
 
@@ -864,17 +872,48 @@ Comprueba automáticamente que `sales_clean.csv`:
 - no contenga valores nulos,
 - no contenga registros duplicados,
 - tenga las 15 columnas esperadas,
-- conserve el orden esperado de las columnas.
+- conserve el orden esperado de las columnas,
+- contenga valores de cobertura 0 y 1,
+- aplique correctamente la regla de cobertura.
 
-El dataset se carga una sola vez para toda la clase mediante:
+Las dos nuevas pruebas de cobertura son:
 
-```python
-@classmethod
-def setUpClass(cls):
-    cls.df = pd.read_csv(CLEAN_SALES_FILE)
+```text
+test_coverage_has_zero_and_one
+test_coverage_rule_is_correct
 ```
 
-Esto evita leer el mismo archivo repetidamente para cada test.
+---
+
+## Validación de la regla de cobertura
+
+La prueba recalcula la cobertura de manera independiente:
+
+```python
+expected_coverage = (
+    (self.df["Unidades"] > 0)
+    | (self.df["Inventario"] > 0)
+).astype(int)
+```
+
+Luego la compara con la columna real:
+
+```python
+coverage_is_correct = (
+    self.df["Cobertura"]
+    == expected_coverage
+).all()
+```
+
+Finalmente:
+
+```python
+self.assertTrue(
+    coverage_is_correct
+)
+```
+
+Esto permite detectar automáticamente si la lógica de cobertura se rompe en el futuro.
 
 ---
 
@@ -889,55 +928,9 @@ python -m unittest discover -s tests -v
 Resultado actual:
 
 ```text
-Ran 10 tests
+Ran 12 tests
 
 OK
-```
-
-Un resultado `OK` significa que todas las condiciones verificadas actualmente se cumplen.
-
----
-
-## Assertions utilizadas
-
-El proyecto utiliza assertions como:
-
-```python
-self.assertTrue(...)
-self.assertEqual(...)
-self.assertIn(...)
-self.assertRaises(...)
-```
-
-Estas permiten comparar el resultado real con el resultado esperado.
-
-Ejemplo:
-
-```python
-self.assertEqual(
-    total_nulls,
-    0
-)
-```
-
-significa que el dataset procesado debe contener exactamente cero valores nulos.
-
----
-
-## FAIL vs ERROR
-
-En `unittest` existen diferencias importantes entre ambos resultados.
-
-```text
-FAIL
-→ el test pudo ejecutarse
-→ pero el resultado no fue el esperado
-```
-
-```text
-ERROR
-→ ocurrió un problema durante la ejecución del test
-→ y la comprobación no pudo completarse normalmente
 ```
 
 ---
@@ -952,7 +945,7 @@ El workflow está definido en:
 .github/workflows/tests.yml
 ```
 
-El proceso de integración continua realiza automáticamente:
+El proceso realiza:
 
 ```text
 Push / Pull Request
@@ -967,75 +960,8 @@ Instalación de dependencias
         ↓
 Ejecución de unittest
         ↓
-Tests OK ✅ / Tests fallidos ❌
+Tests OK / Tests fallidos
 ```
-
-El workflow utiliza:
-
-```yaml
-on:
-  push:
-    branches:
-      - main
-
-  pull_request:
-    branches:
-      - main
-```
-
-Esto significa que los tests se ejecutan automáticamente cuando:
-
-- se realiza un `push` hacia `main`,
-- se crea o actualiza un Pull Request dirigido a `main`.
-
----
-
-## Entorno utilizado por GitHub Actions
-
-El workflow utiliza:
-
-```yaml
-runs-on: ubuntu-latest
-```
-
-GitHub crea una máquina virtual temporal con Ubuntu para ejecutar los tests.
-
-Esto permite comprobar que el proyecto funciona en un entorno diferente e independiente de la computadora utilizada durante el desarrollo.
-
----
-
-## Configuración de Python
-
-GitHub Actions configura Python 3.11 mediante:
-
-```yaml
-- name: Configurar Python
-  uses: actions/setup-python@v7
-  with:
-    python-version: "3.11"
-    cache: "pip"
-```
-
-Esto mantiene la misma versión principal de Python utilizada durante el desarrollo local.
-
-La caché de `pip` puede reutilizar dependencias entre ejecuciones y reducir el tiempo necesario para preparar el entorno.
-
----
-
-## Instalación automática de dependencias
-
-GitHub Actions ejecuta:
-
-```bash
-python -m pip install --upgrade pip
-python -m pip install -r requirements.txt
-```
-
-De esta manera, el entorno temporal instala las dependencias declaradas por el proyecto antes de ejecutar los tests.
-
----
-
-## Ejecución automática de tests
 
 La suite se ejecuta mediante:
 
@@ -1043,21 +969,43 @@ La suite se ejecuta mediante:
 python -m unittest discover -s tests -v
 ```
 
-Actualmente el proyecto cuenta con **10 tests automáticos**.
-
-El primer workflow ejecutado desde GitHub Actions finalizó correctamente, confirmando que los tests también funcionan en un entorno Ubuntu limpio.
+El proyecto cuenta actualmente con **12 tests automáticos**.
 
 ---
 
-## Estado visible del proyecto
+# Flujo de trabajo con ramas
 
-El README incluye un badge:
+Las mejoras se pueden desarrollar utilizando ramas independientes.
 
-```markdown
-![Tests](https://github.com/KleberL/retail-sales-analytics/actions/workflows/tests.yml/badge.svg)
+Ejemplo utilizado:
+
+```text
+main
+  ↓
+feature/pipeline-timing
+  ↓
+cambio
+  ↓
+commit
+  ↓
+push
+  ↓
+Pull Request
+  ↓
+GitHub Actions
+  ↓
+merge
+  ↓
+main
 ```
 
-Este indicador permite ver rápidamente el estado del workflow de tests desde la página principal del repositorio.
+Este flujo permite validar los cambios antes de integrarlos en la rama principal.
+
+Para la mejora actual de cobertura se utiliza:
+
+```text
+feature/realistic-coverage
+```
 
 ---
 
@@ -1076,8 +1024,6 @@ Para ejecutar el proyecto se necesita:
 retail_sales_analytics
 ```
 
-Los comandos deben ejecutarse desde la raíz del proyecto.
-
 ---
 
 ## 1. Clonar el repositorio
@@ -1095,8 +1041,6 @@ cd retail-sales-analytics
 python -m venv .venv
 ```
 
-El entorno virtual mantiene las dependencias del proyecto separadas de las librerías instaladas globalmente en el sistema.
-
 ---
 
 ## 3. Activar el entorno virtual
@@ -1107,13 +1051,7 @@ El entorno virtual mantiene las dependencias del proyecto separadas de las libre
 .\.venv\Scripts\Activate.ps1
 ```
 
-Cuando el entorno esté activo, la terminal mostrará:
-
-```text
-(.venv)
-```
-
-Si PowerShell bloquea la ejecución de `Activate.ps1`, puede habilitarse temporalmente para la sesión actual:
+Si PowerShell bloquea la ejecución:
 
 ```powershell
 Set-ExecutionPolicy -Scope Process -ExecutionPolicy Bypass
@@ -1124,8 +1062,6 @@ Luego:
 ```powershell
 .\.venv\Scripts\Activate.ps1
 ```
-
-El cambio realizado mediante `-Scope Process` solo afecta la sesión actual de PowerShell.
 
 ### Windows CMD
 
@@ -1143,13 +1079,11 @@ source .venv/bin/activate
 
 ## 4. Instalar dependencias
 
-Con el entorno virtual activo:
-
 ```bash
 python -m pip install -r requirements.txt
 ```
 
-Las principales dependencias son:
+Dependencias principales:
 
 ```text
 pandas==3.0.6
@@ -1159,19 +1093,15 @@ SQLAlchemy==2.1.8
 python-dotenv==1.2.4
 ```
 
-Se utiliza `psycopg[binary]` para incluir los componentes necesarios para la conexión con PostgreSQL y facilitar la reproducibilidad del proyecto en entornos nuevos.
-
 ---
 
 ## 5. Configurar variables de entorno
 
-Crear un archivo:
+Crear:
 
 ```text
 .env
 ```
-
-en la raíz del proyecto.
 
 Puede utilizarse `.env.example` como referencia:
 
@@ -1183,21 +1113,13 @@ DB_HOST=localhost
 DB_PORT=5432
 ```
 
-Reemplazar `your_password` por la contraseña local de PostgreSQL.
-
-El archivo `.env` está incluido en `.gitignore` y **no debe subirse a GitHub**.
+El archivo `.env` está incluido en `.gitignore` y no debe subirse a GitHub.
 
 ---
 
 # Ejecución
 
-Existen dos formas de ejecutar el proyecto.
-
----
-
 ## Ejecución recomendada
-
-Con PostgreSQL disponible, las variables configuradas y el entorno virtual activo:
 
 ```bash
 python -m src.run_pipeline
@@ -1209,94 +1131,66 @@ Este comando ejecuta automáticamente todo el flujo principal.
 
 ## Ejecución manual
 
-También es posible ejecutar cada etapa individualmente.
-
-### 1. Generar los datos
+### Generar datos
 
 ```bash
 python -m src.generate_data
 ```
 
-### 2. Revisar la calidad inicial
+### Revisar calidad inicial
 
 ```bash
 python -m src.check_data
 ```
 
-### 3. Limpiar y transformar los datos
+### Limpiar datos
 
 ```bash
 python -m src.clean_data
 ```
 
-### 4. Validar el dataset procesado
+### Validar datos
 
 ```bash
 python -m src.validate_data
 ```
 
-### 5. Cargar los datos en PostgreSQL
+### Cargar PostgreSQL
 
 ```bash
 python -m src.load_to_postgres
 ```
 
-### 6. Ejecutar una consulta desde Python
+### Consultar PostgreSQL
 
 ```bash
 python -m src.query_postgres
 ```
 
-### 7. Generar el análisis de negocio
+### Generar análisis de negocio
 
 ```bash
 python -m src.business_analysis
 ```
 
-### 8. Ejecutar los tests automáticos
+### Ejecutar tests
 
 ```bash
 python -m unittest discover -s tests -v
-```
-
-El flujo manual completo es:
-
-```text
-python -m src.generate_data
-          ↓
-python -m src.check_data
-          ↓
-python -m src.clean_data
-          ↓
-python -m src.validate_data
-          ↓
-python -m src.load_to_postgres
-          ↓
-python -m src.query_postgres
-          ↓
-python -m src.business_analysis
-          ↓
-python -m unittest discover -s tests -v
-```
-
-El mismo proceso puede ejecutarse automáticamente mediante:
-
-```text
-python -m src.run_pipeline
 ```
 
 ---
 
 # Archivos generados
 
-El pipeline produce:
+## Datos
 
 ```text
 data/raw/sales_raw.csv
 data/processed/sales_clean.csv
 ```
 
-Los reportes:
+## Reportes
 
 ```text
 reports/kpis_generales.csv
@@ -1305,7 +1199,7 @@ reports/ventas_por_producto.csv
 reports/ventas_por_mes.csv
 ```
 
-Y las visualizaciones:
+## Visualizaciones
 
 ```text
 images/ventas_por_ciudad.png
@@ -1314,15 +1208,27 @@ images/ventas_mensuales.png
 
 ---
 
-# Ejemplo de resultados
+# Ejemplo de resultados por producto
 
 | Producto | Unidades | Venta total | Cumplimiento promedio |
 |---|---:|---:|---:|
-| Nova Pro | 563 | $180,160 | 74.63% |
-| Nova X2 | 506 | $116,560 | 71.88% |
-| Pulse A2 | 486 | $97,200 | 83.82% |
-| Nova X1 | 510 | $91,800 | 70.56% |
-| Pulse A1 | 578 | $86,700 | 74.18% |
+| Nova Pro | 404 | $129,280 | 58.52% |
+| Nova X1 | 481 | $87,840 | 66.80% |
+| Nova X2 | 368 | $84,640 | 61.82% |
+| Pulse A2 | 407 | $81,400 | 63.31% |
+| Pulse A1 | 524 | $78,600 | 58.25% |
+
+---
+
+# Ejemplo de resultados por ciudad
+
+| Ciudad | Unidades | Venta total | Cumplimiento | Cobertura |
+|---|---:|---:|---:|---:|
+| Guayaquil | 470 | $103,760 | 67.22% | 95.65% |
+| Manta | 490 | $101,250 | 62.72% | 98.17% |
+| Cuenca | 469 | $96,010 | 58.43% | 94.64% |
+| Machala | 407 | $84,380 | 65.96% | 90.32% |
+| Quito | 348 | $76,360 | 54.75% | 89.36% |
 
 ---
 
@@ -1350,15 +1256,19 @@ El repositorio público solo incluye:
 .env.example
 ```
 
-con valores de referencia.
-
-El workflow de GitHub Actions tampoco requiere la contraseña local de PostgreSQL para ejecutar los tests actuales, ya que las pruebas de configuración utilizan mocking.
+Los tests de configuración utilizan mocking, por lo que GitHub Actions no necesita la contraseña local de PostgreSQL.
 
 ---
 
 # Reproducibilidad
 
-El proyecto fue probado dentro de un entorno virtual limpio y posteriormente dentro de GitHub Actions.
+El proyecto fue probado:
+
+- en Windows,
+- dentro de un entorno virtual limpio,
+- mediante ejecución completa del pipeline,
+- mediante tests automáticos,
+- dentro de GitHub Actions utilizando Ubuntu.
 
 El flujo validado es:
 
@@ -1369,27 +1279,16 @@ pip install -r requirements.txt
       ↓
 configuración
       ↓
-ejecución del pipeline
+pipeline
       ↓
 PostgreSQL
       ↓
-KPIs, reportes y gráficos
+KPIs y reportes
       ↓
-tests automáticos
+12 tests
       ↓
 GitHub Actions
 ```
-
-Durante el desarrollo se:
-
-- corrigió una dependencia incompleta de `psycopg`, reemplazándola por `psycopg[binary]`,
-- centralizaron las rutas mediante `pathlib`,
-- agregaron validaciones para configuraciones incompletas,
-- incorporaron tests automáticos,
-- automatizó la ejecución del pipeline completo,
-- agregó detección de fallos entre procesos,
-- configuró integración continua con GitHub Actions,
-- validó la suite de tests en un runner Ubuntu independiente.
 
 ---
 
@@ -1405,13 +1304,13 @@ database.py
 → configuración, validación y conexiones PostgreSQL
 
 generate_data.py
-→ generación de datos
+→ generación de datos sintéticos y escenarios comerciales
 
 check_data.py
 → revisión inicial de calidad
 
 clean_data.py
-→ limpieza y transformación
+→ limpieza, transformación y cálculo de cobertura
 
 validate_data.py
 → validación del dataset procesado
@@ -1423,19 +1322,17 @@ query_postgres.py
 → consultas desde Python
 
 business_analysis.py
-→ KPIs, reportes, gráficos e insights
+→ KPIs, cobertura, reportes, gráficos e insights
 
 run_pipeline.py
-→ automatización y orquestación del pipeline completo
+→ automatización, orquestación y medición de tiempo
 
 tests/
-→ validación automática del proyecto
+→ validación automática del proyecto y reglas de negocio
 
 .github/workflows/tests.yml
 → integración continua y ejecución automática de tests
 ```
-
-Esta organización reduce código duplicado, mejora el mantenimiento y facilita futuras mejoras.
 
 ---
 
@@ -1455,6 +1352,8 @@ Este proyecto demuestra conocimientos prácticos de:
 - psycopg.
 - creación de KPIs.
 - análisis de negocio.
+- cobertura comercial.
+- reglas de negocio.
 - automatización de reportes.
 - visualización con Matplotlib.
 - variables de entorno.
@@ -1472,19 +1371,23 @@ Este proyecto demuestra conocimientos prácticos de:
 - `unittest.mock.patch`.
 - mocking de variables de entorno.
 - validación automatizada de calidad de datos.
+- tests de reglas de negocio.
 - automatización de pipelines.
 - `subprocess`.
 - `sys.executable`.
+- `time.perf_counter`.
 - códigos de salida de procesos.
 - manejo de fallos entre procesos.
 - orquestación de tareas.
-- integración continua (CI).
+- integración continua.
 - GitHub Actions.
 - workflows YAML.
-- runners de GitHub.
-- automatización de tests en GitHub.
-- validación del proyecto en entornos limpios.
-- Git y GitHub.
+- runners Ubuntu.
+- Git.
+- GitHub.
+- ramas.
+- Pull Requests.
+- merges.
 - documentación técnica.
 - separación de responsabilidades.
 - organización de proyectos de datos.
@@ -1494,24 +1397,29 @@ Este proyecto demuestra conocimientos prácticos de:
 
 # Estado del proyecto
 
-El proyecto continúa en desarrollo como parte de una ruta práctica de aprendizaje en análisis de datos, ciencia de datos e ingeniería de software.
+El proyecto se encuentra en una etapa avanzada de desarrollo como parte de una ruta práctica de aprendizaje en análisis de datos, ciencia de datos e ingeniería de software.
 
-Actualmente el proyecto cuenta con:
+Actualmente cuenta con:
 
 - pipeline completo de datos,
+- generación de escenarios comerciales realistas,
 - almacenamiento en PostgreSQL,
 - análisis SQL,
 - KPIs,
+- cobertura comercial,
 - visualizaciones,
 - reportes automatizados,
 - configuración segura,
 - manejo de errores,
-- pruebas automáticas,
+- 12 tests automáticos,
+- tests específicos para reglas de cobertura,
 - ejecución integral mediante un solo comando,
+- medición del tiempo de ejecución,
 - integración continua con GitHub Actions,
-- validación automática de tests después de cada `push` hacia `main`.
+- validación automática después de cada `push`,
+- flujo de trabajo basado en ramas y Pull Requests.
 
-Las siguientes mejoras se incorporarán progresivamente antes del cierre definitivo de la versión de portafolio.
+Las siguientes mejoras estarán orientadas al cierre y presentación final del proyecto como pieza de portafolio.
 
 ---
 
