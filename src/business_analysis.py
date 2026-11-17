@@ -1,5 +1,5 @@
-import pandas as pd
 import matplotlib.pyplot as plt
+import pandas as pd
 
 from src.database import get_engine
 from src.paths import (
@@ -14,127 +14,57 @@ from src.paths import (
 
 engine = get_engine()
 
-consulta_kpis = """
+
+# --------------------------------------------------
+# KPIs generales
+# --------------------------------------------------
+
+query_kpis = """
 SELECT
-    SUM(unidades) AS unidades_totales,
+    SUM(unidades) AS total_unidades,
     SUM(venta_total) AS venta_total,
     ROUND(AVG(cumplimiento), 2) AS cumplimiento_promedio,
-    ROUND(
-        AVG(cumple_target) * 100,
-        2
-    ) AS porcentaje_cumplimiento
+    ROUND(AVG(cumple_target) * 100, 2) AS porcentaje_cumple_target,
+    ROUND(AVG(cobertura) * 100, 2) AS cobertura_general
 FROM sales;
 """
 
-kpis = pd.read_sql(
-    consulta_kpis,
-    engine
+df_kpis = pd.read_sql(
+    query_kpis,
+    engine,
 )
 
-print("\n=== KPIs GENERALES ===")
-print(kpis)
 
+# --------------------------------------------------
+# Ventas por ciudad
+# --------------------------------------------------
 
-consulta_ciudades = """
+query_cities = """
 SELECT
     ciudad,
-    SUM(unidades) AS unidades_totales,
+    SUM(unidades) AS unidades,
     SUM(venta_total) AS venta_total,
-    ROUND(AVG(cumplimiento), 2) AS cumplimiento_promedio
+    ROUND(AVG(cumplimiento), 2) AS cumplimiento_promedio,
+    ROUND(AVG(cobertura) * 100, 2) AS cobertura_promedio
 FROM sales
 GROUP BY ciudad
 ORDER BY venta_total DESC;
 """
 
-ventas_ciudad = pd.read_sql(
-    consulta_ciudades,
-    engine
+df_cities = pd.read_sql(
+    query_cities,
+    engine,
 )
 
-print("\n=== RENDIMIENTO POR CIUDAD ===")
-print(ventas_ciudad)
 
+# --------------------------------------------------
+# Ventas por producto
+# --------------------------------------------------
 
-# Gráfico de venta total por ciudad
-fig, ax = plt.subplots(figsize=(9, 5))
-
-ax.bar(
-    ventas_ciudad["ciudad"],
-    ventas_ciudad["venta_total"]
-)
-
-ax.set_title("Venta total por ciudad")
-ax.set_xlabel("Ciudad")
-ax.set_ylabel("Venta total")
-
-ax.bar_label(
-    ax.containers[0],
-    fmt="%.0f"
-)
-
-plt.tight_layout()
-
-plt.savefig(
-    CITY_CHART_FILE,
-    dpi=300
-)
-
-plt.close()
-
-
-consulta_mensual = """
-SELECT
-    mes,
-    SUM(unidades) AS unidades_totales,
-    SUM(venta_total) AS venta_total
-FROM sales
-GROUP BY mes
-ORDER BY mes;
-"""
-
-ventas_mes = pd.read_sql(
-    consulta_mensual,
-    engine
-)
-
-print("\n=== VENTAS POR MES ===")
-print(ventas_mes)
-
-
-fig, ax = plt.subplots(figsize=(10, 5))
-
-ax.plot(
-    ventas_mes["mes"],
-    ventas_mes["venta_total"],
-    marker="o"
-)
-
-ax.set_title("Evolución mensual de ventas")
-ax.set_xlabel("Mes")
-ax.set_ylabel("Venta total")
-
-ax.set_xticks(
-    ventas_mes["mes"]
-)
-
-ax.grid(
-    axis="y",
-    alpha=0.3
-)
-
-plt.tight_layout()
-
-plt.savefig(
-    MONTH_CHART_FILE,
-    dpi=300
-)
-
-plt.close()
-
-consulta_productos = """
+query_products = """
 SELECT
     producto,
-    SUM(unidades) AS unidades_totales,
+    SUM(unidades) AS unidades,
     SUM(venta_total) AS venta_total,
     ROUND(AVG(cumplimiento), 2) AS cumplimiento_promedio
 FROM sales
@@ -142,74 +72,268 @@ GROUP BY producto
 ORDER BY venta_total DESC;
 """
 
-ventas_producto = pd.read_sql(
-    consulta_productos,
-    engine
+df_products = pd.read_sql(
+    query_products,
+    engine,
 )
 
-print("\n=== RENDIMIENTO POR PRODUCTO ===")
-print(ventas_producto)
 
-mejor_ciudad = ventas_ciudad.loc[
-    ventas_producto["venta_total"].idxmax()
-]
+# --------------------------------------------------
+# Ventas por mes
+# --------------------------------------------------
 
-mejor_producto = ventas_producto.loc[
-    ventas_producto["venta_total"].idxmax()
-]
+query_months = """
+SELECT
+    mes,
+    SUM(unidades) AS unidades,
+    SUM(venta_total) AS venta_total
+FROM sales
+GROUP BY mes
+ORDER BY mes;
+"""
 
-mejor_mes = ventas_mes.loc[
-    ventas_mes["venta_total"].idxmax()
-]
+df_months = pd.read_sql(
+    query_months,
+    engine,
+)
 
-peor_mes = ventas_mes.loc[
-    ventas_mes["venta_total"].idxmin()
-]
 
-print("\n=== PRINCIPALES INSIGHTS ===")
+# --------------------------------------------------
+# Mostrar resultados
+# --------------------------------------------------
+
+print("\n" + "=" * 60)
+print("KPIs GENERALES")
+print("=" * 60)
 
 print(
-    f"Mejor ciudad por ventas: "
-    f"{mejor_ciudad['ciudad']} "
-    f"(${mejor_ciudad['venta_total']})"
+    f"Unidades vendidas: "
+    f"{int(df_kpis.loc[0, 'total_unidades'])}"
 )
 
 print(
-    f"Mejor producto por ventas: "
-    f"{mejor_producto['producto']} "
-    f"(${mejor_producto['venta_total']})"
+    f"Venta total: "
+    f"${int(df_kpis.loc[0, 'venta_total']):,}"
 )
 
 print(
-    f"Mejor mes: "
-    f"{int(mejor_mes['mes'])} "
-    f"(${mejor_mes['venta_total']})"
+    f"Cumplimiento promedio: "
+    f"{float(df_kpis.loc[0, 'cumplimiento_promedio']):.2f}%"
+)
+
+print(
+    f"Registros que cumplen target: "
+    f"{float(df_kpis.loc[0, 'porcentaje_cumple_target']):.2f}%"
+)
+
+print(
+    f"Cobertura general: "
+    f"{float(df_kpis.loc[0, 'cobertura_general']):.2f}%"
+)
+
+
+print("\n" + "=" * 60)
+print("VENTAS POR CIUDAD")
+print("=" * 60)
+
+print(
+    df_cities.to_string(
+        index=False
+    )
+)
+
+
+print("\n" + "=" * 60)
+print("VENTAS POR PRODUCTO")
+print("=" * 60)
+
+print(
+    df_products.to_string(
+        index=False
+    )
+)
+
+
+print("\n" + "=" * 60)
+print("VENTAS POR MES")
+print("=" * 60)
+
+print(
+    df_months.to_string(
+        index=False
+    )
+)
+
+
+# --------------------------------------------------
+# Insights automáticos
+# --------------------------------------------------
+
+best_city = df_cities.loc[
+    df_cities["venta_total"].idxmax()
+]
+
+best_product = df_products.loc[
+    df_products["venta_total"].idxmax()
+]
+
+best_month = df_months.loc[
+    df_months["venta_total"].idxmax()
+]
+
+worst_month = df_months.loc[
+    df_months["venta_total"].idxmin()
+]
+
+best_coverage_city = df_cities.loc[
+    df_cities["cobertura_promedio"].idxmax()
+]
+
+
+print("\n" + "=" * 60)
+print("INSIGHTS")
+print("=" * 60)
+
+print(
+    f"Ciudad con mayor venta: "
+    f"{best_city['ciudad']} "
+    f"(${int(best_city['venta_total']):,})"
+)
+
+print(
+    f"Producto con mayor venta: "
+    f"{best_product['producto']} "
+    f"(${int(best_product['venta_total']):,})"
+)
+
+print(
+    f"Mes con mayor venta: "
+    f"{int(best_month['mes'])} "
+    f"(${int(best_month['venta_total']):,})"
 )
 
 print(
     f"Mes con menor venta: "
-    f"{int(peor_mes['mes'])} "
-    f"(${peor_mes['venta_total']})"
+    f"{int(worst_month['mes'])} "
+    f"(${int(worst_month['venta_total']):,})"
 )
 
-kpis.to_csv(
+print(
+    f"Ciudad con mayor cobertura: "
+    f"{best_coverage_city['ciudad']} "
+    f"({float(best_coverage_city['cobertura_promedio']):.2f}%)"
+)
+
+
+# --------------------------------------------------
+# Guardar reportes CSV
+# --------------------------------------------------
+
+df_kpis.to_csv(
     KPI_REPORT_FILE,
-    index=False
+    index=False,
 )
 
-ventas_ciudad.to_csv(
+df_cities.to_csv(
     CITY_REPORT_FILE,
-    index=False
+    index=False,
 )
 
-ventas_producto.to_csv(
+df_products.to_csv(
     PRODUCT_REPORT_FILE,
-    index=False
+    index=False,
 )
 
-ventas_mes.to_csv(
+df_months.to_csv(
     MONTH_REPORT_FILE,
-    index=False
+    index=False,
 )
 
-engine.dispose()
+
+print("\nReportes CSV guardados correctamente")
+
+
+# --------------------------------------------------
+# Gráfico: ventas por ciudad
+# --------------------------------------------------
+
+plt.figure(
+    figsize=(9, 5)
+)
+
+plt.bar(
+    df_cities["ciudad"],
+    df_cities["venta_total"],
+)
+
+plt.title(
+    "Venta total por ciudad"
+)
+
+plt.xlabel(
+    "Ciudad"
+)
+
+plt.ylabel(
+    "Venta total"
+)
+
+plt.xticks(
+    rotation=45
+)
+
+plt.tight_layout()
+
+plt.savefig(
+    CITY_CHART_FILE,
+    dpi=150,
+)
+
+plt.close()
+
+
+# --------------------------------------------------
+# Gráfico: evolución mensual
+# --------------------------------------------------
+
+plt.figure(
+    figsize=(9, 5)
+)
+
+plt.plot(
+    df_months["mes"],
+    df_months["venta_total"],
+    marker="o",
+)
+
+plt.title(
+    "Evolución mensual de ventas"
+)
+
+plt.xlabel(
+    "Mes"
+)
+
+plt.ylabel(
+    "Venta total"
+)
+
+plt.xticks(
+    df_months["mes"]
+)
+
+plt.grid(
+    alpha=0.3
+)
+
+plt.tight_layout()
+
+plt.savefig(
+    MONTH_CHART_FILE,
+    dpi=150,
+)
+
+plt.close()
+
+
+print("Gráficos guardados correctamente")

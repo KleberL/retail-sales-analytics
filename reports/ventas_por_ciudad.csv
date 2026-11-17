@@ -1,6 +1,6 @@
-ciudad,unidades_totales,venta_total,cumplimiento_promedio
-Manta,649,133830,73.35
-Guayaquil,537,118280,76.04
-Machala,519,116280,77.44
-Cuenca,501,108730,72.49
-Quito,437,95300,74.25
+ciudad,unidades,venta_total,cumplimiento_promedio,cobertura_promedio
+Guayaquil,470,103760,67.22,95.65
+Manta,490,101250,62.72,98.17
+Cuenca,469,96010,58.43,94.64
+Machala,407,84380,65.96,90.32
+Quito,348,76360,54.75,89.36

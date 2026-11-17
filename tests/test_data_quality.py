@@ -57,6 +57,31 @@ class TestDataQuality(unittest.TestCase):
             expected_columns
         )
 
+    def test_coverage_has_zero_and_one(self):
+        coverage_values = set(
+            self.df["Cobertura"].unique()
+        )
+
+        self.assertEqual(
+            coverage_values,
+            {0, 1}
+        )
+
+    def test_coverage_rule_is_correct(self):
+        expected_coverage = (
+            (self.df["Unidades"] > 0)
+            | (self.df["Inventario"] > 0)
+        ).astype(int)
+
+        coverage_is_correct = (
+            self.df["Cobertura"]
+            == expected_coverage
+        ).all()
+
+        self.assertTrue(
+            coverage_is_correct
+        )
+
 
 if __name__ == "__main__":
     unittest.main()
