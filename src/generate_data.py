@@ -6,11 +6,7 @@ import pandas as pd
 from src.paths import RAW_SALES_FILE
 
 
-random.seed(42)
-
-
-# Catálogos del proyecto
-cities = [
+CITIES = [
     "Guayaquil",
     "Quito",
     "Cuenca",
@@ -18,7 +14,7 @@ cities = [
     "Manta",
 ]
 
-products = {
+PRODUCTS = {
     "Nova X1": 180,
     "Nova X2": 230,
     "Nova Pro": 320,
@@ -26,14 +22,14 @@ products = {
     "Pulse A2": 200,
 }
 
-supervisors = [
+SUPERVISORS = [
     "Carlos Mendoza",
     "Andrea Ruiz",
     "Luis Torres",
     "Sofía Herrera",
 ]
 
-stores = {
+STORES = {
     "Guayaquil": [
         "GYE Centro",
         "GYE Norte",
@@ -62,111 +58,135 @@ stores = {
 }
 
 
-# Fecha inicial para generar ventas durante un año
-start_date = datetime(2026, 1, 1)
+def generate_dataset(
+    rows=500,
+    seed=42,
+):
+    random.seed(seed)
 
-
-data = []
-
-
-for _ in range(500):
-    city = random.choice(cities)
-    store = random.choice(stores[city])
-
-    product = random.choice(list(products.keys()))
-    price = products[product]
-
-    date = start_date + timedelta(
-        days=random.randint(0, 364)
+    start_date = datetime(
+        2026,
+        1,
+        1,
     )
 
-    # Aproximadamente 20% de los registros tendrá cero ventas.
-    units = (
-        0
-        if random.random() < 0.20
-        else random.randint(1, 10)
+    data = []
+
+    for _ in range(rows):
+        city = random.choice(CITIES)
+        store = random.choice(STORES[city])
+
+        product = random.choice(
+            list(PRODUCTS.keys())
+        )
+
+        price = PRODUCTS[product]
+
+        date = start_date + timedelta(
+            days=random.randint(0, 364)
+        )
+
+        units = (
+            0
+            if random.random() < 0.20
+            else random.randint(1, 10)
+        )
+
+        target = random.randint(
+            4,
+            12,
+        )
+
+        inventory = (
+            0
+            if random.random() < 0.30
+            else random.randint(1, 20)
+        )
+
+        supervisor = random.choice(
+            SUPERVISORS
+        )
+
+        data.append({
+            "Fecha": date.strftime(
+                "%Y-%m-%d"
+            ),
+            "Ciudad": city,
+            "Tienda": store,
+            "Supervisor": supervisor,
+            "Producto": product,
+            "Precio": price,
+            "Unidades": units,
+            "Target": target,
+            "Inventario": inventory,
+        })
+
+    return pd.DataFrame(data)
+
+
+def add_quality_issues(df):
+    df = df.copy()
+
+    df.loc[5, "Supervisor"] = None
+    df.loc[100, "Supervisor"] = None
+    df.loc[250, "Supervisor"] = None
+
+    df.loc[50, "Inventario"] = None
+    df.loc[300, "Inventario"] = None
+
+    df.loc[20, "Ciudad"] = " Guayaquil "
+    df.loc[75, "Producto"] = " Nova X1 "
+    df.loc[160, "Supervisor"] = " Carlos Mendoza "
+
+    df.loc[120, "Ciudad"] = "quito"
+    df.loc[220, "Producto"] = "pulse a2"
+
+    df.loc[350, "Tienda"] = "MTA centro"
+
+    duplicate_rows = df.iloc[:5].copy()
+
+    df = pd.concat(
+        [
+            df,
+            duplicate_rows,
+        ],
+        ignore_index=True,
     )
 
-    target = random.randint(4, 12)
+    return df
 
-    # Aproximadamente 30% tendrá inventario igual a cero.
-    inventory = (
-        0
-        if random.random() < 0.30
-        else random.randint(1, 20)
+
+def save_dataset(df):
+    df.to_csv(
+        RAW_SALES_FILE,
+        index=False,
     )
 
-    supervisor = random.choice(supervisors)
-
-    data.append({
-        "Fecha": date.strftime("%Y-%m-%d"),
-        "Ciudad": city,
-        "Tienda": store,
-        "Supervisor": supervisor,
-        "Producto": product,
-        "Precio": price,
-        "Unidades": units,
-        "Target": target,
-        "Inventario": inventory,
-    })
-
-
-df = pd.DataFrame(data)
+    print(
+        "Dataset generado correctamente"
+    )
+    print(
+        f"Archivo: {RAW_SALES_FILE}"
+    )
+    print(
+        f"Filas generadas: {len(df)}"
+    )
+    print(
+        f"Columnas: {len(df.columns)}"
+    )
 
 
-# --------------------------------------------------
-# Problemas controlados de calidad
-# --------------------------------------------------
+def main():
+    df = generate_dataset()
 
-# Valores nulos en Supervisor
-df.loc[5, "Supervisor"] = None
-df.loc[100, "Supervisor"] = None
-df.loc[250, "Supervisor"] = None
+    df = add_quality_issues(
+        df
+    )
 
-
-# Valores nulos en Inventario
-df.loc[50, "Inventario"] = None
-df.loc[300, "Inventario"] = None
+    save_dataset(
+        df
+    )
 
 
-# Espacios innecesarios
-df.loc[20, "Ciudad"] = " Guayaquil "
-df.loc[75, "Producto"] = " Nova X1 "
-df.loc[160, "Supervisor"] = " Carlos Mendoza "
-
-
-# Diferencias de mayúsculas y minúsculas
-df.loc[120, "Ciudad"] = "quito"
-df.loc[220, "Producto"] = "pulse a2"
-
-
-# Inconsistencia controlada en una tienda
-df.loc[350, "Tienda"] = "MTA centro"
-
-
-# --------------------------------------------------
-# Crear duplicados intencionales
-# --------------------------------------------------
-
-duplicate_rows = df.iloc[:5].copy()
-
-df = pd.concat(
-    [df, duplicate_rows],
-    ignore_index=True,
-)
-
-
-# --------------------------------------------------
-# Guardar dataset raw
-# --------------------------------------------------
-
-df.to_csv(
-    RAW_SALES_FILE,
-    index=False,
-)
-
-
-print("Dataset generado correctamente")
-print(f"Archivo: {RAW_SALES_FILE}")
-print(f"Filas generadas: {len(df)}")
-print(f"Columnas: {len(df.columns)}")
+if __name__ == "__main__":
+    main()
