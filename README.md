@@ -4,7 +4,7 @@
 
 Proyecto end-to-end de análisis de datos para un negocio minorista ficticio, enfocado en ventas, cumplimiento de objetivos, inventario y cobertura comercial.
 
-El proyecto cubre un flujo completo de datos: generación de información sintética, control de calidad, limpieza con Python y pandas, almacenamiento en PostgreSQL, análisis con SQL, cálculo de KPIs, generación de reportes, creación automatizada de visualizaciones, pruebas automáticas, ejecución integral del pipeline e integración continua con GitHub Actions.
+El proyecto cubre un flujo completo de datos: generación de información sintética, control de calidad, limpieza con Python y pandas, almacenamiento en PostgreSQL, análisis con SQL, cálculo de KPIs, generación de reportes, creación automatizada de visualizaciones, pruebas automáticas, ejecución integral del pipeline, integración continua con GitHub Actions y una arquitectura modular basada en funciones reutilizables.
 
 > **Nota:** todos los datos utilizados son sintéticos y fueron generados exclusivamente con fines educativos y de portafolio. No contienen información real de empresas, clientes o personas.
 
@@ -31,12 +31,14 @@ Construir un pipeline de análisis reproducible que permita:
 - Centralizar las rutas del proyecto mediante `pathlib`.
 - Validar la configuración antes de conectarse a PostgreSQL.
 - Manejar errores de conexión y liberar recursos correctamente.
-- Validar automáticamente rutas, configuración y calidad de datos mediante tests.
+- Validar automáticamente rutas, configuración, generación y calidad de datos mediante tests.
 - Ejecutar todo el pipeline automáticamente con un solo comando.
 - Detener la ejecución si una etapa crítica falla.
 - Medir el tiempo total de ejecución del pipeline.
 - Ejecutar automáticamente los tests en GitHub después de cada `push` o Pull Request hacia `main`.
 - Trabajar con ramas y Pull Requests antes de integrar cambios a `main`.
+- Separar la lógica del proyecto en funciones reutilizables.
+- Evitar efectos secundarios al importar módulos.
 
 ---
 
@@ -205,6 +207,184 @@ La combinación de ambas condiciones permite crear registros sin cobertura de fo
 
 ---
 
+# Arquitectura modular
+
+El proyecto fue refactorizado para evitar que los módulos ejecuten procesos automáticamente cuando son importados.
+
+Ahora los scripts principales separan:
+
+```text
+lógica
+↓
+funciones reutilizables
+↓
+main()
+↓
+punto de entrada
+```
+
+Este patrón permite importar funciones sin ejecutar efectos secundarios.
+
+---
+
+## Refactorización de generate_data.py
+
+`generate_data.py` ahora está dividido en funciones:
+
+```text
+generate_dataset()
+→ crea el dataset base
+
+add_quality_issues()
+→ introduce errores controlados
+
+save_dataset()
+→ guarda el CSV
+
+main()
+→ coordina el proceso
+```
+
+Ejemplo:
+
+```python
+def main():
+    df = generate_dataset()
+
+    df = add_quality_issues(
+        df
+    )
+
+    save_dataset(
+        df
+    )
+
+
+if __name__ == "__main__":
+    main()
+```
+
+Esto significa que:
+
+```bash
+python -m src.generate_data
+```
+
+ejecuta el proceso completo.
+
+Pero:
+
+```python
+from src.generate_data import generate_dataset
+```
+
+solo importa la función y **no genera automáticamente ningún archivo**.
+
+---
+
+## Refactorización de business_analysis.py
+
+`business_analysis.py` también fue dividido en funciones reutilizables:
+
+```text
+get_kpis()
+→ obtiene KPIs generales
+
+get_city_analysis()
+→ obtiene resultados por ciudad
+
+get_product_analysis()
+→ obtiene resultados por producto
+
+get_month_analysis()
+→ obtiene resultados por mes
+
+print_results()
+→ presenta resultados
+
+print_insights()
+→ genera insights
+
+save_reports()
+→ guarda reportes CSV
+
+create_charts()
+→ genera visualizaciones
+
+main()
+→ coordina todo el análisis
+```
+
+Ejemplo:
+
+```python
+def main():
+    engine = get_engine()
+
+    df_kpis = get_kpis(
+        engine
+    )
+
+    df_cities = get_city_analysis(
+        engine
+    )
+
+    df_products = get_product_analysis(
+        engine
+    )
+
+    df_months = get_month_analysis(
+        engine
+    )
+
+    print_results(
+        df_kpis,
+        df_cities,
+        df_products,
+        df_months,
+    )
+
+    print_insights(
+        df_cities,
+        df_products,
+        df_months,
+    )
+
+    save_reports(
+        df_kpis,
+        df_cities,
+        df_products,
+        df_months,
+    )
+
+    create_charts(
+        df_cities,
+        df_months,
+    )
+
+
+if __name__ == "__main__":
+    main()
+```
+
+De esta forma:
+
+```bash
+python -m src.business_analysis
+```
+
+ejecuta todo el análisis.
+
+Pero:
+
+```python
+import src.business_analysis
+```
+
+solo carga las funciones y **no consulta PostgreSQL, no genera reportes y no crea gráficos automáticamente**.
+
+---
+
 # Visualizaciones
 
 ## Venta total por ciudad
@@ -247,6 +427,8 @@ La combinación de ambas condiciones permite crear registros sin cobertura de fo
 - `pathlib`
 - módulos Python
 - paquetes Python
+- funciones reutilizables
+- punto de entrada `main()`
 - entorno virtual `venv`
 - separación de responsabilidades
 - manejo de excepciones
@@ -256,7 +438,10 @@ La combinación de ambas condiciones permite crear registros sin cobertura de fo
 - `unittest`
 - `unittest.mock`
 - assertions
+- `pandas.testing`
 - pruebas de calidad de datos
+- pruebas de generación de datos
+- pruebas de reproducibilidad
 - validación de reglas de negocio
 
 ## Automatización
@@ -330,7 +515,8 @@ retail-sales-analytics/
 │   ├── __init__.py
 │   ├── test_paths.py
 │   ├── test_database.py
-│   └── test_data_quality.py
+│   ├── test_data_quality.py
+│   └── test_generate_data.py
 │
 ├── .env.example
 ├── .gitignore
@@ -454,22 +640,6 @@ IMAGES_DIR = PROJECT_ROOT / "images"
 
 Esto evita repetir rutas manuales en diferentes archivos.
 
-En lugar de escribir:
-
-```python
-pd.read_csv("data/processed/sales_clean.csv")
-```
-
-los módulos utilizan:
-
-```python
-from src.paths import CLEAN_SALES_FILE
-
-df = pd.read_csv(CLEAN_SALES_FILE)
-```
-
-Esto facilita el mantenimiento y reduce errores relacionados con rutas.
-
 ---
 
 ## 6. Configuración de PostgreSQL
@@ -486,20 +656,6 @@ El módulo se encarga de:
 - validar la configuración,
 - crear conexiones mediante SQLAlchemy,
 - proporcionar parámetros para psycopg.
-
-El flujo es:
-
-```text
-.env
- ↓
-get_db_config()
- ↓
-validación
- ↓
-get_engine()
-o
-get_connection_params()
-```
 
 ---
 
@@ -524,8 +680,6 @@ Ejemplo:
 ```text
 RuntimeError: Faltan variables de entorno: port
 ```
-
-Esto evita que el programa continúe hasta producir errores menos claros dentro de PostgreSQL o SQLAlchemy.
 
 ---
 
@@ -560,50 +714,6 @@ finally
 ```
 
 para controlar errores de PostgreSQL y garantizar el cierre de recursos.
-
-Flujo general:
-
-```text
-try
-→ intenta conectarse
-→ crea el cursor
-→ ejecuta operaciones SQL
-→ carga los datos
-
-except
-→ captura errores de PostgreSQL
-→ muestra información del error
-→ vuelve a propagar el error
-
-finally
-→ cierra el cursor si fue creado
-→ cierra la conexión si fue creada
-```
-
-Ejemplo simplificado:
-
-```python
-conexion = None
-cursor = None
-
-try:
-    conexion = psycopg.connect(**parametros)
-    cursor = conexion.cursor()
-
-except psycopg.Error as error:
-    print("Error de PostgreSQL:")
-    print(error)
-    raise
-
-finally:
-    if cursor is not None:
-        cursor.close()
-
-    if conexion is not None:
-        conexion.close()
-```
-
-Este enfoque evita dejar conexiones abiertas si ocurre un error durante una operación.
 
 ---
 
@@ -650,13 +760,6 @@ La cobertura por ciudad utiliza:
 
 ```sql
 ROUND(AVG(cobertura) * 100, 2) AS cobertura_promedio
-```
-
-Los resultados se almacenan automáticamente en:
-
-```text
-reports/
-images/
 ```
 
 ---
@@ -709,104 +812,17 @@ para medir cuánto tarda la ejecución completa.
 
 Ejemplo:
 
-```python
-start_time = time.perf_counter()
-
-# Pipeline
-
-elapsed_time = time.perf_counter() - start_time
-```
-
-Al finalizar muestra:
-
 ```text
-Tiempo total: 10.60 segundos
+Tiempo total: 9.41 segundos
 ```
-
-Si una etapa falla, también puede mostrar cuánto tiempo transcurrió antes del error.
-
----
-
-## Uso de subprocess
-
-El pipeline utiliza:
-
-```python
-import subprocess
-```
-
-para ejecutar cada etapa como un proceso independiente.
-
-Ejemplo:
-
-```python
-subprocess.run(
-    command,
-    cwd=PROJECT_ROOT,
-    check=True,
-)
-```
-
-`cwd=PROJECT_ROOT` garantiza que los comandos se ejecuten desde la raíz del proyecto.
-
-`check=True` permite detectar automáticamente procesos que terminan con error.
-
----
-
-## Uso de sys.executable
-
-En lugar de utilizar simplemente:
-
-```text
-python
-```
-
-el pipeline utiliza:
-
-```python
-sys.executable
-```
-
-Esto permite utilizar exactamente el mismo intérprete con el que se inició el proyecto.
-
-Si el entorno virtual está activo:
-
-```text
-(.venv)
-```
-
-se utilizará el Python del entorno virtual.
-
----
-
-## Manejo de fallos del pipeline
-
-Cuando una etapa falla, el pipeline captura:
-
-```python
-subprocess.CalledProcessError
-```
-
-y muestra:
-
-```text
-============================================================
-PIPELINE DETENIDO
-============================================================
-Etapa con error: nombre_etapa
-Código de salida: 1
-Tiempo transcurrido: X.XX segundos
-```
-
-Esto evita que etapas posteriores continúen trabajando con datos incompletos o incorrectos.
 
 ---
 
 # Pruebas automáticas
 
-El proyecto utiliza `unittest`, incluido en la biblioteca estándar de Python.
+El proyecto utiliza `unittest`.
 
-Actualmente existen **12 tests automáticos**.
+Actualmente existen **15 tests automáticos**.
 
 Los tests están ubicados en:
 
@@ -876,44 +892,76 @@ Comprueba automáticamente que `sales_clean.csv`:
 - contenga valores de cobertura 0 y 1,
 - aplique correctamente la regla de cobertura.
 
-Las dos nuevas pruebas de cobertura son:
-
-```text
-test_coverage_has_zero_and_one
-test_coverage_rule_is_correct
-```
-
 ---
 
-## Validación de la regla de cobertura
+## Tests de generación de datos
 
-La prueba recalcula la cobertura de manera independiente:
+Archivo:
 
-```python
-expected_coverage = (
-    (self.df["Unidades"] > 0)
-    | (self.df["Inventario"] > 0)
-).astype(int)
+```text
+tests/test_generate_data.py
 ```
 
-Luego la compara con la columna real:
+Comprueba directamente la función:
 
 ```python
-coverage_is_correct = (
-    self.df["Cobertura"]
-    == expected_coverage
-).all()
+generate_dataset()
 ```
 
-Finalmente:
+Los tres tests son:
+
+```text
+test_generate_dataset_has_expected_shape
+test_generate_dataset_has_zero_sales_and_inventory
+test_generate_dataset_is_reproducible
+```
+
+El primero comprueba:
+
+```text
+500 filas
+9 columnas
+```
+
+El segundo verifica que el generador realmente produzca:
+
+```text
+Unidades = 0
+Inventario = 0
+```
+
+en algunos registros.
+
+El tercero comprueba reproducibilidad usando la misma semilla:
 
 ```python
-self.assertTrue(
-    coverage_is_correct
+df_1 = generate_dataset(
+    seed=42
+)
+
+df_2 = generate_dataset(
+    seed=42
 )
 ```
 
-Esto permite detectar automáticamente si la lógica de cobertura se rompe en el futuro.
+y compara ambos DataFrames mediante:
+
+```python
+assert_frame_equal(
+    df_1,
+    df_2,
+)
+```
+
+Esto garantiza que:
+
+```text
+misma semilla
++
+mismo código
+=
+mismo dataset
+```
 
 ---
 
@@ -928,7 +976,7 @@ python -m unittest discover -s tests -v
 Resultado actual:
 
 ```text
-Ran 12 tests
+Ran 15 tests
 
 OK
 ```
@@ -963,21 +1011,15 @@ Ejecución de unittest
 Tests OK / Tests fallidos
 ```
 
-La suite se ejecuta mediante:
-
-```bash
-python -m unittest discover -s tests -v
-```
-
-El proyecto cuenta actualmente con **12 tests automáticos**.
+Actualmente GitHub Actions ejecuta **15 tests automáticos**.
 
 ---
 
 # Flujo de trabajo con ramas
 
-Las mejoras se pueden desarrollar utilizando ramas independientes.
+Las mejoras se desarrollan utilizando ramas independientes.
 
-Ejemplo utilizado:
+Ejemplo:
 
 ```text
 main
@@ -999,12 +1041,10 @@ merge
 main
 ```
 
-Este flujo permite validar los cambios antes de integrarlos en la rama principal.
-
-Para la mejora actual de cobertura se utiliza:
+La refactorización actual utiliza:
 
 ```text
-feature/realistic-coverage
+refactor/script-entrypoints
 ```
 
 ---
@@ -1268,6 +1308,7 @@ El proyecto fue probado:
 - dentro de un entorno virtual limpio,
 - mediante ejecución completa del pipeline,
 - mediante tests automáticos,
+- mediante generación reproducible con `seed=42`,
 - dentro de GitHub Actions utilizando Ubuntu.
 
 El flujo validado es:
@@ -1285,7 +1326,7 @@ PostgreSQL
       ↓
 KPIs y reportes
       ↓
-12 tests
+15 tests
       ↓
 GitHub Actions
 ```
@@ -1304,7 +1345,7 @@ database.py
 → configuración, validación y conexiones PostgreSQL
 
 generate_data.py
-→ generación de datos sintéticos y escenarios comerciales
+→ generación de datos sintéticos mediante funciones reutilizables
 
 check_data.py
 → revisión inicial de calidad
@@ -1322,7 +1363,7 @@ query_postgres.py
 → consultas desde Python
 
 business_analysis.py
-→ KPIs, cobertura, reportes, gráficos e insights
+→ consultas, KPIs, reportes, gráficos e insights mediante funciones
 
 run_pipeline.py
 → automatización, orquestación y medición de tiempo
@@ -1333,6 +1374,23 @@ tests/
 .github/workflows/tests.yml
 → integración continua y ejecución automática de tests
 ```
+
+---
+
+# Principios de diseño aplicados
+
+El proyecto aplica varios principios básicos de organización de software:
+
+- separación de responsabilidades,
+- funciones pequeñas y reutilizables,
+- configuración centralizada,
+- rutas centralizadas,
+- ejecución mediante puntos de entrada,
+- reducción de efectos secundarios,
+- automatización de pruebas,
+- reproducibilidad,
+- manejo explícito de errores,
+- control de versiones mediante ramas.
 
 ---
 
@@ -1360,6 +1418,10 @@ Este proyecto demuestra conocimientos prácticos de:
 - validación de configuración.
 - manejo seguro de credenciales.
 - módulos y paquetes Python.
+- funciones reutilizables.
+- `main()`.
+- `if __name__ == "__main__"`.
+- reducción de efectos secundarios al importar módulos.
 - `pathlib`.
 - gestión centralizada de rutas.
 - entornos virtuales.
@@ -1369,9 +1431,11 @@ Este proyecto demuestra conocimientos prácticos de:
 - pruebas automáticas con `unittest`.
 - assertions.
 - `unittest.mock.patch`.
+- `pandas.testing.assert_frame_equal`.
 - mocking de variables de entorno.
 - validación automatizada de calidad de datos.
 - tests de reglas de negocio.
+- tests de reproducibilidad.
 - automatización de pipelines.
 - `subprocess`.
 - `sys.executable`.
@@ -1388,6 +1452,7 @@ Este proyecto demuestra conocimientos prácticos de:
 - ramas.
 - Pull Requests.
 - merges.
+- refactorización.
 - documentación técnica.
 - separación de responsabilidades.
 - organización de proyectos de datos.
@@ -1397,12 +1462,13 @@ Este proyecto demuestra conocimientos prácticos de:
 
 # Estado del proyecto
 
-El proyecto se encuentra en una etapa avanzada de desarrollo como parte de una ruta práctica de aprendizaje en análisis de datos, ciencia de datos e ingeniería de software.
+El proyecto se encuentra en su **fase final de preparación para portafolio**.
 
 Actualmente cuenta con:
 
 - pipeline completo de datos,
-- generación de escenarios comerciales realistas,
+- generación reproducible de datos sintéticos,
+- escenarios comerciales realistas,
 - almacenamiento en PostgreSQL,
 - análisis SQL,
 - KPIs,
@@ -1411,7 +1477,11 @@ Actualmente cuenta con:
 - reportes automatizados,
 - configuración segura,
 - manejo de errores,
-- 12 tests automáticos,
+- arquitectura modular basada en funciones,
+- reducción de efectos secundarios al importar módulos,
+- 15 tests automáticos,
+- tests de generación de datos,
+- tests de reproducibilidad,
 - tests específicos para reglas de cobertura,
 - ejecución integral mediante un solo comando,
 - medición del tiempo de ejecución,
@@ -1419,7 +1489,7 @@ Actualmente cuenta con:
 - validación automática después de cada `push`,
 - flujo de trabajo basado en ramas y Pull Requests.
 
-Las siguientes mejoras estarán orientadas al cierre y presentación final del proyecto como pieza de portafolio.
+Las siguientes mejoras estarán orientadas al cierre definitivo, revisión visual del repositorio y presentación final como proyecto de portafolio.
 
 ---
 
