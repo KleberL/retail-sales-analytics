@@ -2,75 +2,94 @@
 
 ![Tests](https://github.com/KleberL/retail-sales-analytics/actions/workflows/tests.yml/badge.svg)
 
-Proyecto end-to-end de análisis de datos para un negocio minorista ficticio, enfocado en ventas, cumplimiento de objetivos, inventario y cobertura comercial.
+End-to-end data analytics project that simulates a retail sales and inventory operation and transforms raw commercial data into business KPIs, reports and visual insights.
 
-El proyecto cubre un flujo completo de datos: generación de información sintética, control de calidad, limpieza con Python y pandas, almacenamiento en PostgreSQL, análisis con SQL, cálculo de KPIs, generación de reportes, creación automatizada de visualizaciones, pruebas automáticas, ejecución integral del pipeline, integración continua con GitHub Actions y una arquitectura modular basada en funciones reutilizables.
+The project combines **Python, SQL and PostgreSQL** in a reproducible data pipeline with automated testing and continuous integration.
 
-> **Nota:** todos los datos utilizados son sintéticos y fueron generados exclusivamente con fines educativos y de portafolio. No contienen información real de empresas, clientes o personas.
+## Tech Stack
 
----
-
-# Objetivo
-
-Construir un pipeline de análisis reproducible que permita:
-
-- Generar datos de ventas ficticios con problemas controlados de calidad.
-- Simular tiendas con ventas e inventarios iguales a cero.
-- Detectar valores nulos, duplicados e inconsistencias.
-- Limpiar y transformar información con pandas.
-- Calcular métricas derivadas de ventas, cumplimiento y cobertura.
-- Evaluar cobertura comercial de forma realista.
-- Almacenar los datos procesados en PostgreSQL.
-- Ejecutar análisis mediante SQL.
-- Consultar PostgreSQL desde Python.
-- Crear KPIs y rankings de negocio.
-- Detectar automáticamente los mejores y peores resultados.
-- Generar reportes CSV y gráficos reutilizables.
-- Mantener credenciales fuera del código.
-- Ejecutar el proyecto dentro de un entorno virtual reproducible.
-- Centralizar las rutas del proyecto mediante `pathlib`.
-- Validar la configuración antes de conectarse a PostgreSQL.
-- Manejar errores de conexión y liberar recursos correctamente.
-- Validar automáticamente rutas, configuración, generación y calidad de datos mediante tests.
-- Ejecutar todo el pipeline automáticamente con un solo comando.
-- Detener la ejecución si una etapa crítica falla.
-- Medir el tiempo total de ejecución del pipeline.
-- Ejecutar automáticamente los tests en GitHub después de cada `push` o Pull Request hacia `main`.
-- Trabajar con ramas y Pull Requests antes de integrar cambios a `main`.
-- Separar la lógica del proyecto en funciones reutilizables.
-- Evitar efectos secundarios al importar módulos.
+`Python` · `pandas` · `PostgreSQL` · `SQL` · `SQLAlchemy` · `psycopg` · `Matplotlib` · `unittest` · `Git` · `GitHub Actions`
 
 ---
 
-# Pipeline de datos
+## Key Results
+
+| KPI | Result |
+|---|---:|
+| Total sales | **$461,760** |
+| Units sold | **2,184** |
+| Average target achievement | **61.69%** |
+| Records meeting target | **23.40%** |
+| Commercial coverage | **93.80%** |
+| Automated tests | **15** |
+
+### Main Insights
+
+- **Guayaquil** generated the highest sales: **$103,760**
+- **Nova Pro** was the highest-revenue product: **$129,280**
+- **Pulse A1** had the highest number of units sold
+- **Manta** achieved the highest commercial coverage: **98.17%**
+- **August** was the strongest sales month: **$61,390**
+- **September** recorded the lowest monthly sales: **$21,480**
+
+> All data used in this project is synthetic and was created exclusively for learning and portfolio purposes.
+
+---
+
+## Visual Analysis
+
+### Sales by City
+
+![Sales by City](images/ventas_por_ciudad.png)
+
+### Monthly Sales Trend
+
+![Monthly Sales Trend](images/ventas_mensuales.png)
+
+---
+
+## Business Problem
+
+A retail operation needs to understand:
+
+- Which cities generate the most revenue?
+- Which products contribute the most sales?
+- Are stores achieving their assigned targets?
+- Which locations have sufficient commercial coverage?
+- How do sales change throughout the year?
+- Can the complete analysis be reproduced automatically?
+
+This project builds a complete workflow to answer those questions.
+
+---
+
+## Data Pipeline
 
 ```text
-Datos sintéticos
-      ↓
-sales_raw.csv
-      ↓
-Control de calidad
-      ↓
-Limpieza y transformación con pandas
-      ↓
-sales_clean.csv
-      ↓
+Synthetic Data Generation
+        ↓
+Raw CSV
+        ↓
+Data Quality Inspection
+        ↓
+Cleaning & Transformation
+        ↓
+Processed CSV
+        ↓
 PostgreSQL
-      ↓
-Consultas SQL
-      ↓
-Python + SQLAlchemy
-      ↓
-KPIs e insights
-      ↓
-Reportes CSV + visualizaciones
-      ↓
-Pruebas automáticas
-      ↓
+        ↓
+SQL Analysis
+        ↓
+Business KPIs
+        ↓
+CSV Reports + Visualizations
+        ↓
+Automated Tests
+        ↓
 GitHub Actions
 ```
 
-El flujo completo también puede ejecutarse mediante:
+The complete pipeline can be executed with one command:
 
 ```bash
 python -m src.run_pipeline
@@ -78,398 +97,261 @@ python -m src.run_pipeline
 
 ---
 
-# KPIs principales
+## Commercial Coverage Logic
 
-| KPI | Resultado |
-|---|---:|
-| Unidades vendidas | 2,184 |
-| Venta total | $461,760 |
-| Cumplimiento promedio | 61.69% |
-| Registros que cumplen el target | 23.40% |
-| Cobertura general | 93.80% |
-
----
-
-# Principales insights
-
-- **Guayaquil** presenta la mayor venta total: **$103,760**.
-- **Nova Pro** es el producto con mayor venta total: **$129,280**.
-- **Pulse A1** registra el mayor volumen de unidades vendidas.
-- **Manta** presenta la mayor cobertura promedio: **98.17%**.
-- **Agosto** es el mes con mayor venta: **$61,390**.
-- **Septiembre** es el mes con menor venta: **$21,480**.
-- La cobertura general del dataset es de **93.80%**.
-
-Los resultados cambiaron respecto a versiones anteriores del proyecto porque el generador ahora permite registros con cero ventas y cero inventario.
-
-Esto produce KPIs más realistas y evita que la cobertura quede artificialmente cercana al 100%.
-
-Debido a que el dataset es sintético, estos resultados demuestran el proceso analítico y no deben interpretarse como tendencias reales de mercado.
-
----
-
-# Lógica de cobertura
-
-La cobertura representa si un registro tiene presencia comercial mediante ventas o inventario.
-
-La regla utilizada es:
+Coverage is used to determine whether a store/product record has commercial presence through either sales or inventory.
 
 ```text
-Unidades > 0
-O
-Inventario > 0
+Units > 0
+OR
+Inventory > 0
         ↓
-Cobertura = 1
+Coverage = 1
 ```
 
-Solo existe falta de cobertura cuando:
+A record has no coverage only when:
 
 ```text
-Unidades = 0
-Y
-Inventario = 0
+Units = 0
+AND
+Inventory = 0
         ↓
-Cobertura = 0
+Coverage = 0
 ```
 
-Ejemplos:
+Current dataset:
 
 ```text
-Unidades = 0
-Inventario = 8
-→ Cobertura = 1
+Coverage = 1 → 469 records
+Coverage = 0 → 31 records
+
+Total → 500 records
 ```
 
-```text
-Unidades = 4
-Inventario = 0
-→ Cobertura = 1
-```
+Result:
 
 ```text
-Unidades = 0
-Inventario = 0
-→ Cobertura = 0
-```
-
-En el dataset actual:
-
-```text
-Cobertura = 0 → 31 registros
-Cobertura = 1 → 469 registros
-Total         → 500 registros
-```
-
-Por tanto:
-
-```text
-Cobertura general = 469 / 500
-Cobertura general = 93.80%
+Commercial coverage = 93.80%
 ```
 
 ---
 
-# Generación realista de ventas e inventario
+## Synthetic Dataset
 
-Anteriormente las unidades vendidas se generaban siempre entre:
+The project generates **500 base records** representing retail activity across several Ecuadorian cities.
+
+Cities include:
+
+- Guayaquil
+- Quito
+- Cuenca
+- Machala
+- Manta
+
+Products include:
+
+- Nova X1
+- Nova X2
+- Nova Pro
+- Pulse A1
+- Pulse A2
+
+To make the data more realistic:
+
+- approximately 20% of records may have zero sales,
+- approximately 30% may have zero inventory.
+
+The generator also introduces controlled data-quality issues such as:
+
+- null values,
+- duplicated rows,
+- inconsistent capitalization,
+- leading/trailing spaces,
+- inconsistent store names.
+
+Five duplicated records are intentionally added, producing an initial raw dataset of:
 
 ```text
-1 y 10
+505 rows
+9 columns
 ```
 
-Eso provocaba que todos los registros tuvieran ventas y, por tanto, la cobertura fuera prácticamente siempre igual a 1.
+After cleaning:
 
-La lógica actual permite ventas iguales a cero:
-
-```python
-units = (
-    0
-    if random.random() < 0.20
-    else random.randint(1, 10)
-)
+```text
+500 rows
+15 columns
 ```
-
-Esto genera aproximadamente un **20% de probabilidad** de tener cero unidades vendidas.
-
-El inventario utiliza:
-
-```python
-inventory = (
-    0
-    if random.random() < 0.30
-    else random.randint(1, 20)
-)
-```
-
-Esto genera aproximadamente un **30% de probabilidad** de inventario igual a cero.
-
-La combinación de ambas condiciones permite crear registros sin cobertura de forma natural.
 
 ---
 
-# Arquitectura modular
+## Data Cleaning
 
-El proyecto fue refactorizado para evitar que los módulos ejecuten procesos automáticamente cuando son importados.
+The cleaning process includes:
 
-Ahora los scripts principales separan:
+- duplicate removal,
+- text normalization,
+- null-value treatment,
+- date conversion,
+- year and month extraction,
+- sales calculation,
+- target-achievement calculation,
+- target-status creation,
+- commercial-coverage calculation.
+
+The processed dataset is saved as:
 
 ```text
-lógica
-↓
-funciones reutilizables
-↓
-main()
-↓
-punto de entrada
+data/processed/sales_clean.csv
 ```
-
-Este patrón permite importar funciones sin ejecutar efectos secundarios.
 
 ---
 
-## Refactorización de generate_data.py
+## PostgreSQL Integration
 
-`generate_data.py` ahora está dividido en funciones:
+The cleaned dataset is loaded into PostgreSQL.
+
+Database:
+
+```text
+retail_sales_analytics
+```
+
+Main table:
+
+```text
+sales
+```
+
+The project uses:
+
+- `psycopg` for database operations,
+- `SQLAlchemy` for analytical queries from Python,
+- environment variables for database credentials.
+
+---
+
+## SQL Analysis
+
+The project performs SQL analysis for:
+
+- total revenue,
+- units sold,
+- sales by city,
+- sales by product,
+- monthly sales,
+- target achievement,
+- commercial coverage.
+
+Main SQL queries are also stored in:
+
+```text
+sql/analysis_queries.sql
+```
+
+---
+
+## Business Analysis
+
+`business_analysis.py` retrieves processed data from PostgreSQL and generates:
+
+- general KPIs,
+- city rankings,
+- product rankings,
+- monthly results,
+- coverage metrics,
+- business insights,
+- CSV reports,
+- visualizations.
+
+Example KPI:
+
+```sql
+ROUND(AVG(cobertura) * 100, 2) AS cobertura_general
+```
+
+---
+
+## Modular Architecture
+
+The project separates responsibilities into independent modules.
+
+```text
+src/
+│
+├── paths.py
+│   └── Centralized project paths
+│
+├── database.py
+│   └── PostgreSQL configuration and connections
+│
+├── generate_data.py
+│   └── Synthetic dataset generation
+│
+├── check_data.py
+│   └── Initial quality inspection
+│
+├── clean_data.py
+│   └── Data cleaning and transformation
+│
+├── validate_data.py
+│   └── Processed-data validation
+│
+├── load_to_postgres.py
+│   └── PostgreSQL loading
+│
+├── query_postgres.py
+│   └── Database queries
+│
+├── business_analysis.py
+│   └── KPIs, reports and charts
+│
+└── run_pipeline.py
+    └── Full pipeline orchestration
+```
+
+---
+
+## Reusable Functions
+
+The data generator was refactored into reusable functions:
 
 ```text
 generate_dataset()
-→ crea el dataset base
-
 add_quality_issues()
-→ introduce errores controlados
-
 save_dataset()
-→ guarda el CSV
-
 main()
-→ coordina el proceso
 ```
 
-Ejemplo:
-
-```python
-def main():
-    df = generate_dataset()
-
-    df = add_quality_issues(
-        df
-    )
-
-    save_dataset(
-        df
-    )
-
-
-if __name__ == "__main__":
-    main()
-```
-
-Esto significa que:
-
-```bash
-python -m src.generate_data
-```
-
-ejecuta el proceso completo.
-
-Pero:
-
-```python
-from src.generate_data import generate_dataset
-```
-
-solo importa la función y **no genera automáticamente ningún archivo**.
-
----
-
-## Refactorización de business_analysis.py
-
-`business_analysis.py` también fue dividido en funciones reutilizables:
+The business-analysis module uses:
 
 ```text
 get_kpis()
-→ obtiene KPIs generales
-
 get_city_analysis()
-→ obtiene resultados por ciudad
-
 get_product_analysis()
-→ obtiene resultados por producto
-
 get_month_analysis()
-→ obtiene resultados por mes
 
 print_results()
-→ presenta resultados
-
 print_insights()
-→ genera insights
 
 save_reports()
-→ guarda reportes CSV
-
 create_charts()
-→ genera visualizaciones
 
 main()
-→ coordina todo el análisis
 ```
 
-Ejemplo:
+Modules use:
 
 ```python
-def main():
-    engine = get_engine()
-
-    df_kpis = get_kpis(
-        engine
-    )
-
-    df_cities = get_city_analysis(
-        engine
-    )
-
-    df_products = get_product_analysis(
-        engine
-    )
-
-    df_months = get_month_analysis(
-        engine
-    )
-
-    print_results(
-        df_kpis,
-        df_cities,
-        df_products,
-        df_months,
-    )
-
-    print_insights(
-        df_cities,
-        df_products,
-        df_months,
-    )
-
-    save_reports(
-        df_kpis,
-        df_cities,
-        df_products,
-        df_months,
-    )
-
-    create_charts(
-        df_cities,
-        df_months,
-    )
-
-
 if __name__ == "__main__":
     main()
 ```
 
-De esta forma:
-
-```bash
-python -m src.business_analysis
-```
-
-ejecuta todo el análisis.
-
-Pero:
-
-```python
-import src.business_analysis
-```
-
-solo carga las funciones y **no consulta PostgreSQL, no genera reportes y no crea gráficos automáticamente**.
+This prevents unwanted side effects when they are imported from other modules or tests.
 
 ---
 
-# Visualizaciones
-
-## Venta total por ciudad
-
-![Venta total por ciudad](images/ventas_por_ciudad.png)
-
-## Evolución mensual de ventas
-
-![Evolución mensual de ventas](images/ventas_mensuales.png)
-
----
-
-# Tecnologías utilizadas
-
-## Lenguajes y análisis
-
-- Python 3.11
-- SQL
-- pandas
-- NumPy
-
-## Base de datos
-
-- PostgreSQL
-- psycopg
-- SQLAlchemy
-
-## Visualización
-
-- Matplotlib
-
-## Configuración y seguridad
-
-- python-dotenv
-- variables de entorno
-- `.gitignore`
-
-## Organización del proyecto
-
-- `pathlib`
-- módulos Python
-- paquetes Python
-- funciones reutilizables
-- punto de entrada `main()`
-- entorno virtual `venv`
-- separación de responsabilidades
-- manejo de excepciones
-
-## Testing
-
-- `unittest`
-- `unittest.mock`
-- assertions
-- `pandas.testing`
-- pruebas de calidad de datos
-- pruebas de generación de datos
-- pruebas de reproducibilidad
-- validación de reglas de negocio
-
-## Automatización
-
-- `subprocess`
-- `sys.executable`
-- `time.perf_counter`
-- códigos de salida
-- orquestación de procesos
-
-## Integración continua
-
-- GitHub Actions
-- workflows YAML
-- ejecución automática de tests
-- runners Ubuntu
-
-## Control de versiones
-
-- Git
-- GitHub
-- ramas
-- Pull Requests
-- merge
-
----
-
-# Estructura del proyecto
+## Project Structure
 
 ```text
 retail-sales-analytics/
@@ -500,23 +382,23 @@ retail-sales-analytics/
 │
 ├── src/
 │   ├── __init__.py
-│   ├── database.py
-│   ├── paths.py
-│   ├── generate_data.py
+│   ├── business_analysis.py
 │   ├── check_data.py
 │   ├── clean_data.py
-│   ├── validate_data.py
+│   ├── database.py
+│   ├── generate_data.py
 │   ├── load_to_postgres.py
+│   ├── paths.py
 │   ├── query_postgres.py
-│   ├── business_analysis.py
-│   └── run_pipeline.py
+│   ├── run_pipeline.py
+│   └── validate_data.py
 │
 ├── tests/
 │   ├── __init__.py
-│   ├── test_paths.py
 │   ├── test_database.py
 │   ├── test_data_quality.py
-│   └── test_generate_data.py
+│   ├── test_generate_data.py
+│   └── test_paths.py
 │
 ├── .env.example
 ├── .gitignore
@@ -524,456 +406,48 @@ retail-sales-analytics/
 └── requirements.txt
 ```
 
-El directorio `.venv/` se crea localmente para el entorno virtual, pero está excluido del repositorio mediante `.gitignore`.
-
 ---
 
-# Flujo del proyecto
+## Automated Testing
 
-## 1. Generación de datos
+The project currently includes **15 automated tests** using Python's `unittest`.
 
-`generate_data.py` crea un dataset sintético de ventas con 500 registros base.
+Tests validate:
 
-Además introduce intencionalmente problemas controlados de calidad para simular situaciones reales:
+### Project structure
 
-- valores nulos,
-- registros duplicados,
-- espacios innecesarios,
-- diferencias entre mayúsculas y minúsculas,
-- inconsistencias en nombres.
+- project root,
+- data directories,
+- output directories,
+- required files.
 
-También genera condiciones comerciales más realistas:
+### Database configuration
 
-- aproximadamente 20% de probabilidad de tener cero ventas,
-- aproximadamente 30% de probabilidad de tener inventario igual a cero.
+- correct environment-variable loading,
+- missing configuration detection.
 
-Después se agregan 5 duplicados intencionales.
+### Data quality
 
-El resultado inicial contiene:
+- exactly 500 processed records,
+- no null values,
+- no duplicates,
+- expected columns,
+- valid coverage values,
+- correct coverage business rule.
 
-```text
-505 filas
-9 columnas
-```
+### Data generation
 
-y se almacena en:
+- expected dataset dimensions,
+- zero-sales and zero-inventory scenarios,
+- reproducible output using the same random seed.
 
-```text
-data/raw/sales_raw.csv
-```
-
----
-
-## 2. Control de calidad
-
-`check_data.py` realiza una inspección inicial del dataset y permite revisar:
-
-- número de filas y columnas,
-- tipos de datos,
-- valores nulos,
-- registros duplicados,
-- estructura general de la información.
-
----
-
-## 3. Limpieza y transformación
-
-`clean_data.py` realiza el procesamiento principal del dataset.
-
-Entre las transformaciones se incluyen:
-
-- eliminación de duplicados,
-- normalización de texto,
-- tratamiento de valores faltantes,
-- conversión de fechas,
-- creación de año y mes,
-- cálculo de venta total,
-- cálculo de porcentaje de cumplimiento,
-- creación de indicador de cumplimiento de target,
-- creación de indicador de cobertura.
-
-El dataset procesado final contiene:
-
-```text
-500 filas
-15 columnas
-```
-
-y se almacena en:
-
-```text
-data/processed/sales_clean.csv
-```
-
----
-
-## 4. Validación
-
-`validate_data.py` comprueba que el dataset final:
-
-- no contenga valores nulos,
-- no contenga duplicados,
-- tenga las columnas esperadas,
-- conserve una estructura adecuada para el análisis.
-
----
-
-## 5. Gestión centralizada de rutas
-
-Las rutas utilizadas por los diferentes módulos están centralizadas en:
-
-```text
-src/paths.py
-```
-
-El proyecto utiliza `pathlib` para construir rutas a partir de la carpeta raíz.
-
-Ejemplo:
-
-```python
-PROJECT_ROOT = Path(__file__).resolve().parent.parent
-
-DATA_DIR = PROJECT_ROOT / "data"
-REPORTS_DIR = PROJECT_ROOT / "reports"
-IMAGES_DIR = PROJECT_ROOT / "images"
-```
-
-Esto evita repetir rutas manuales en diferentes archivos.
-
----
-
-## 6. Configuración de PostgreSQL
-
-La configuración de base de datos está centralizada en:
-
-```text
-src/database.py
-```
-
-El módulo se encarga de:
-
-- cargar variables desde `.env`,
-- validar la configuración,
-- crear conexiones mediante SQLAlchemy,
-- proporcionar parámetros para psycopg.
-
----
-
-## 7. Validación de configuración
-
-Antes de crear una conexión, `database.py` comprueba que las variables necesarias tengan un valor válido.
-
-Las variables requeridas son:
-
-```text
-DB_NAME
-DB_USER
-DB_PASSWORD
-DB_HOST
-DB_PORT
-```
-
-Si alguna falta o está vacía, el programa genera un error claro.
-
-Ejemplo:
-
-```text
-RuntimeError: Faltan variables de entorno: port
-```
-
----
-
-## 8. Carga de datos a PostgreSQL
-
-`load_to_postgres.py`:
-
-- obtiene la configuración validada,
-- crea una conexión mediante psycopg,
-- crea la tabla `sales` si no existe,
-- elimina los datos de la carga anterior,
-- carga las 500 filas procesadas,
-- confirma los cambios mediante una transacción,
-- cierra correctamente los recursos utilizados.
-
-La información se almacena en la base de datos:
-
-```text
-retail_sales_analytics
-```
-
----
-
-## 9. Manejo de errores
-
-La carga de datos utiliza:
-
-```text
-try
-except
-finally
-```
-
-para controlar errores de PostgreSQL y garantizar el cierre de recursos.
-
----
-
-## 10. Análisis SQL
-
-Las consultas principales se almacenan en:
-
-```text
-sql/analysis_queries.sql
-```
-
-El análisis incluye:
-
-- ventas por ciudad,
-- ventas por producto,
-- unidades vendidas,
-- cumplimiento promedio,
-- cobertura,
-- comportamiento mensual.
-
----
-
-## 11. Análisis de negocio
-
-`business_analysis.py` consulta PostgreSQL y automatiza la generación de:
-
-- KPIs generales,
-- cobertura general,
-- ranking de ciudades,
-- cobertura promedio por ciudad,
-- ranking de productos,
-- ventas mensuales,
-- mejores y peores resultados,
-- reportes CSV,
-- visualizaciones.
-
-El KPI de cobertura general se calcula mediante:
-
-```sql
-ROUND(AVG(cobertura) * 100, 2) AS cobertura_general
-```
-
-La cobertura por ciudad utiliza:
-
-```sql
-ROUND(AVG(cobertura) * 100, 2) AS cobertura_promedio
-```
-
----
-
-# Ejecución automatizada del pipeline
-
-El proyecto incluye un orquestador en:
-
-```text
-src/run_pipeline.py
-```
-
-Este módulo permite ejecutar el pipeline completo con un solo comando:
-
-```bash
-python -m src.run_pipeline
-```
-
-El proceso ejecuta automáticamente:
-
-```text
-Generación de datos
-        ↓
-Control de calidad inicial
-        ↓
-Limpieza y transformación
-        ↓
-Validación
-        ↓
-Carga a PostgreSQL
-        ↓
-Consulta de PostgreSQL
-        ↓
-Análisis de negocio
-        ↓
-Tests automáticos
-```
-
----
-
-## Medición del tiempo
-
-El pipeline utiliza:
-
-```python
-time.perf_counter()
-```
-
-para medir cuánto tarda la ejecución completa.
-
-Ejemplo:
-
-```text
-Tiempo total: 9.41 segundos
-```
-
----
-
-# Pruebas automáticas
-
-El proyecto utiliza `unittest`.
-
-Actualmente existen **15 tests automáticos**.
-
-Los tests están ubicados en:
-
-```text
-tests/
-```
-
----
-
-## Tests de rutas
-
-Archivo:
-
-```text
-tests/test_paths.py
-```
-
-Comprueba:
-
-- que la raíz del proyecto exista,
-- que las carpetas de datos existan,
-- que las carpetas de reportes e imágenes existan,
-- que `sales_raw.csv` exista,
-- que `sales_clean.csv` exista.
-
----
-
-## Tests de configuración
-
-Archivo:
-
-```text
-tests/test_database.py
-```
-
-Comprueba:
-
-- que `get_db_config()` genere correctamente la configuración esperada,
-- que una variable inválida produzca un `RuntimeError`,
-- que la validación funcione sin modificar el `.env` real.
-
-Utiliza:
-
-```python
-from unittest.mock import patch
-```
-
-para simular variables de entorno.
-
----
-
-## Tests de calidad de datos
-
-Archivo:
-
-```text
-tests/test_data_quality.py
-```
-
-Comprueba automáticamente que `sales_clean.csv`:
-
-- tenga exactamente 500 registros,
-- no contenga valores nulos,
-- no contenga registros duplicados,
-- tenga las 15 columnas esperadas,
-- conserve el orden esperado de las columnas,
-- contenga valores de cobertura 0 y 1,
-- aplique correctamente la regla de cobertura.
-
----
-
-## Tests de generación de datos
-
-Archivo:
-
-```text
-tests/test_generate_data.py
-```
-
-Comprueba directamente la función:
-
-```python
-generate_dataset()
-```
-
-Los tres tests son:
-
-```text
-test_generate_dataset_has_expected_shape
-test_generate_dataset_has_zero_sales_and_inventory
-test_generate_dataset_is_reproducible
-```
-
-El primero comprueba:
-
-```text
-500 filas
-9 columnas
-```
-
-El segundo verifica que el generador realmente produzca:
-
-```text
-Unidades = 0
-Inventario = 0
-```
-
-en algunos registros.
-
-El tercero comprueba reproducibilidad usando la misma semilla:
-
-```python
-df_1 = generate_dataset(
-    seed=42
-)
-
-df_2 = generate_dataset(
-    seed=42
-)
-```
-
-y compara ambos DataFrames mediante:
-
-```python
-assert_frame_equal(
-    df_1,
-    df_2,
-)
-```
-
-Esto garantiza que:
-
-```text
-misma semilla
-+
-mismo código
-=
-mismo dataset
-```
-
----
-
-## Ejecutar todos los tests
-
-Desde la raíz del proyecto:
+Run the complete test suite with:
 
 ```bash
 python -m unittest discover -s tests -v
 ```
 
-Resultado actual:
+Current result:
 
 ```text
 Ran 15 tests
@@ -983,107 +457,179 @@ OK
 
 ---
 
-# Integración continua
+## Continuous Integration
 
-El proyecto utiliza **GitHub Actions** para ejecutar automáticamente la suite de pruebas cada vez que se realiza un `push` o un Pull Request hacia la rama `main`.
+The repository uses **GitHub Actions**.
 
-El workflow está definido en:
+Every push or Pull Request targeting `main` automatically:
+
+```text
+Checks out repository
+        ↓
+Sets up Python 3.11
+        ↓
+Installs dependencies
+        ↓
+Runs automated tests
+        ↓
+Pass / Fail
+```
+
+Workflow:
 
 ```text
 .github/workflows/tests.yml
 ```
 
-El proceso realiza:
-
-```text
-Push / Pull Request
-        ↓
-GitHub Actions
-        ↓
-Máquina Ubuntu temporal
-        ↓
-Python 3.11
-        ↓
-Instalación de dependencias
-        ↓
-Ejecución de unittest
-        ↓
-Tests OK / Tests fallidos
-```
-
-Actualmente GitHub Actions ejecuta **15 tests automáticos**.
+This helps detect regressions before changes are integrated into the main branch.
 
 ---
 
-# Flujo de trabajo con ramas
+## Pipeline Automation
 
-Las mejoras se desarrollan utilizando ramas independientes.
+The complete project can be executed using:
 
-Ejemplo:
-
-```text
-main
-  ↓
-feature/pipeline-timing
-  ↓
-cambio
-  ↓
-commit
-  ↓
-push
-  ↓
-Pull Request
-  ↓
-GitHub Actions
-  ↓
-merge
-  ↓
-main
+```bash
+python -m src.run_pipeline
 ```
 
-La refactorización actual utiliza:
+The orchestrator automatically performs:
 
 ```text
-refactor/script-entrypoints
+Generate data
+     ↓
+Inspect quality
+     ↓
+Clean data
+     ↓
+Validate data
+     ↓
+Load PostgreSQL
+     ↓
+Query database
+     ↓
+Generate business analysis
+     ↓
+Run automated tests
+```
+
+A recent complete execution finished successfully in approximately:
+
+```text
+9.41 seconds
+```
+
+Execution time may vary depending on the environment.
+
+---
+
+## Error Handling
+
+Database loading uses structured exception handling:
+
+```text
+try
+except
+finally
+```
+
+This ensures that:
+
+- PostgreSQL errors are reported clearly,
+- failures stop the pipeline,
+- database cursors and connections are closed correctly.
+
+The pipeline also stops immediately when a subprocess returns a failure code.
+
+---
+
+## Configuration & Security
+
+Database credentials are never hardcoded in the source code.
+
+Local credentials are stored in:
+
+```text
+.env
+```
+
+This file is excluded from Git using:
+
+```text
+.gitignore
+```
+
+The repository only contains:
+
+```text
+.env.example
+```
+
+Required variables:
+
+```text
+DB_NAME
+DB_USER
+DB_PASSWORD
+DB_HOST
+DB_PORT
+```
+
+Example:
+
+```env
+DB_NAME=retail_sales_analytics
+DB_USER=postgres
+DB_PASSWORD=your_password
+DB_HOST=localhost
+DB_PORT=5432
 ```
 
 ---
 
-# Instalación
+## Reproducibility
 
-## Requisitos previos
+Dataset generation uses a fixed random seed:
 
-Para ejecutar el proyecto se necesita:
+```python
+seed=42
+```
 
-- Python 3.11 o compatible.
-- PostgreSQL.
-- Git.
-- Una base de datos PostgreSQL llamada:
+This means:
 
 ```text
-retail_sales_analytics
+same code
++
+same seed
+=
+same dataset
 ```
+
+The project also includes:
+
+- pinned dependencies,
+- virtual-environment support,
+- centralized paths,
+- environment-variable validation,
+- automated tests,
+- continuous integration.
 
 ---
 
-## 1. Clonar el repositorio
+# Installation
+
+## 1. Clone the Repository
 
 ```bash
 git clone https://github.com/KleberL/retail-sales-analytics.git
 cd retail-sales-analytics
 ```
 
----
-
-## 2. Crear un entorno virtual
+## 2. Create a Virtual Environment
 
 ```bash
 python -m venv .venv
 ```
-
----
-
-## 3. Activar el entorno virtual
 
 ### Windows PowerShell
 
@@ -1091,22 +637,16 @@ python -m venv .venv
 .\.venv\Scripts\Activate.ps1
 ```
 
-Si PowerShell bloquea la ejecución:
+If PowerShell blocks activation:
 
 ```powershell
 Set-ExecutionPolicy -Scope Process -ExecutionPolicy Bypass
 ```
 
-Luego:
+Then:
 
 ```powershell
 .\.venv\Scripts\Activate.ps1
-```
-
-### Windows CMD
-
-```cmd
-.venv\Scripts\activate.bat
 ```
 
 ### macOS / Linux
@@ -1117,103 +657,95 @@ source .venv/bin/activate
 
 ---
 
-## 4. Instalar dependencias
+## 3. Install Dependencies
 
 ```bash
 python -m pip install -r requirements.txt
 ```
 
-Dependencias principales:
-
-```text
-pandas==3.0.6
-matplotlib==3.11.2
-psycopg[binary]==3.3.8
-SQLAlchemy==2.1.8
-python-dotenv==1.2.4
-```
-
 ---
 
-## 5. Configurar variables de entorno
+## 4. Configure PostgreSQL
 
-Crear:
+Create a PostgreSQL database named:
+
+```text
+retail_sales_analytics
+```
+
+Copy:
+
+```text
+.env.example
+```
+
+to:
 
 ```text
 .env
 ```
 
-Puede utilizarse `.env.example` como referencia:
-
-```text
-DB_NAME=retail_sales_analytics
-DB_USER=postgres
-DB_PASSWORD=your_password
-DB_HOST=localhost
-DB_PORT=5432
-```
-
-El archivo `.env` está incluido en `.gitignore` y no debe subirse a GitHub.
+and configure your local PostgreSQL credentials.
 
 ---
 
-# Ejecución
+## 5. Run the Project
 
-## Ejecución recomendada
+Recommended:
 
 ```bash
 python -m src.run_pipeline
 ```
 
-Este comando ejecuta automáticamente todo el flujo principal.
-
 ---
 
-## Ejecución manual
+# Manual Execution
 
-### Generar datos
+Each stage can also be executed independently.
+
+Generate data:
 
 ```bash
 python -m src.generate_data
 ```
 
-### Revisar calidad inicial
+Inspect raw data:
 
 ```bash
 python -m src.check_data
 ```
 
-### Limpiar datos
+Clean data:
 
 ```bash
 python -m src.clean_data
 ```
 
-### Validar datos
+Validate processed data:
 
 ```bash
 python -m src.validate_data
 ```
 
-### Cargar PostgreSQL
+Load PostgreSQL:
 
 ```bash
 python -m src.load_to_postgres
 ```
 
-### Consultar PostgreSQL
+Query PostgreSQL:
 
 ```bash
 python -m src.query_postgres
 ```
 
-### Generar análisis de negocio
+Generate business analysis:
 
 ```bash
 python -m src.business_analysis
 ```
 
-### Ejecutar tests
+Run tests:
 
 ```bash
 python -m unittest discover -s tests -v
@@ -1221,16 +753,15 @@ python -m unittest discover -s tests -v
 
 ---
 
-# Archivos generados
+# Output Files
 
-## Datos
+### Processed Data
 
 ```text
-data/raw/sales_raw.csv
 data/processed/sales_clean.csv
 ```
 
-## Reportes
+### Reports
 
 ```text
 reports/kpis_generales.csv
@@ -1239,7 +770,7 @@ reports/ventas_por_producto.csv
 reports/ventas_por_mes.csv
 ```
 
-## Visualizaciones
+### Charts
 
 ```text
 images/ventas_por_ciudad.png
@@ -1248,253 +779,101 @@ images/ventas_mensuales.png
 
 ---
 
-# Ejemplo de resultados por producto
+# Skills Demonstrated
 
-| Producto | Unidades | Venta total | Cumplimiento promedio |
-|---|---:|---:|---:|
-| Nova Pro | 404 | $129,280 | 58.52% |
-| Nova X1 | 481 | $87,840 | 66.80% |
-| Nova X2 | 368 | $84,640 | 61.82% |
-| Pulse A2 | 407 | $81,400 | 63.31% |
-| Pulse A1 | 524 | $78,600 | 58.25% |
+This project demonstrates practical experience with:
+
+- Python
+- pandas
+- SQL
+- PostgreSQL
+- data cleaning
+- data transformation
+- relational databases
+- business KPIs
+- commercial coverage analysis
+- SQLAlchemy
+- psycopg
+- Matplotlib
+- modular Python architecture
+- reusable functions
+- environment variables
+- secure configuration
+- `pathlib`
+- exception handling
+- automated testing
+- mocking
+- reproducible data generation
+- pipeline automation
+- subprocess orchestration
+- Git
+- GitHub
+- branches
+- Pull Requests
+- GitHub Actions
+- continuous integration
+- technical documentation
 
 ---
 
-# Ejemplo de resultados por ciudad
+# Development Workflow
 
-| Ciudad | Unidades | Venta total | Cumplimiento | Cobertura |
-|---|---:|---:|---:|---:|
-| Guayaquil | 470 | $103,760 | 67.22% | 95.65% |
-| Manta | 490 | $101,250 | 62.72% | 98.17% |
-| Cuenca | 469 | $96,010 | 58.43% | 94.64% |
-| Machala | 407 | $84,380 | 65.96% | 90.32% |
-| Quito | 348 | $76,360 | 54.75% | 89.36% |
+Improvements were developed through dedicated Git branches and Pull Requests before being merged into `main`.
 
----
-
-# Seguridad
-
-El proyecto evita almacenar credenciales directamente dentro del código.
-
-Las credenciales se cargan mediante:
+Examples include:
 
 ```text
-.env
-      ↓
-python-dotenv
-      ↓
-src/database.py
-      ↓
-PostgreSQL
+feature/pipeline-timing
+feature/realistic-coverage
+refactor/script-entrypoints
 ```
 
-`.env` está excluido mediante `.gitignore`.
-
-El repositorio público solo incluye:
+This workflow allowed each improvement to be:
 
 ```text
-.env.example
-```
-
-Los tests de configuración utilizan mocking, por lo que GitHub Actions no necesita la contraseña local de PostgreSQL.
-
----
-
-# Reproducibilidad
-
-El proyecto fue probado:
-
-- en Windows,
-- dentro de un entorno virtual limpio,
-- mediante ejecución completa del pipeline,
-- mediante tests automáticos,
-- mediante generación reproducible con `seed=42`,
-- dentro de GitHub Actions utilizando Ubuntu.
-
-El flujo validado es:
-
-```text
-Nuevo entorno
-      ↓
-pip install -r requirements.txt
-      ↓
-configuración
-      ↓
-pipeline
-      ↓
-PostgreSQL
-      ↓
-KPIs y reportes
-      ↓
-15 tests
-      ↓
-GitHub Actions
+Developed
+    ↓
+Tested
+    ↓
+Pushed
+    ↓
+Reviewed through Pull Request
+    ↓
+Validated by GitHub Actions
+    ↓
+Merged into main
 ```
 
 ---
 
-# Arquitectura
+# Project Status
 
-El proyecto separa responsabilidades entre módulos:
+**Portfolio-ready data analytics project.**
 
-```text
-paths.py
-→ rutas y ubicaciones del proyecto
+The project currently includes:
 
-database.py
-→ configuración, validación y conexiones PostgreSQL
-
-generate_data.py
-→ generación de datos sintéticos mediante funciones reutilizables
-
-check_data.py
-→ revisión inicial de calidad
-
-clean_data.py
-→ limpieza, transformación y cálculo de cobertura
-
-validate_data.py
-→ validación del dataset procesado
-
-load_to_postgres.py
-→ carga de datos y manejo de errores PostgreSQL
-
-query_postgres.py
-→ consultas desde Python
-
-business_analysis.py
-→ consultas, KPIs, reportes, gráficos e insights mediante funciones
-
-run_pipeline.py
-→ automatización, orquestación y medición de tiempo
-
-tests/
-→ validación automática del proyecto y reglas de negocio
-
-.github/workflows/tests.yml
-→ integración continua y ejecución automática de tests
-```
+- complete end-to-end pipeline,
+- synthetic but realistic commercial dataset,
+- automated data cleaning,
+- PostgreSQL integration,
+- SQL business analysis,
+- KPI calculation,
+- commercial coverage analysis,
+- automated reports,
+- data visualizations,
+- modular Python architecture,
+- 15 automated tests,
+- reproducible data generation,
+- pipeline automation,
+- error handling,
+- secure environment configuration,
+- GitHub Actions CI,
+- branch and Pull Request workflow.
 
 ---
 
-# Principios de diseño aplicados
-
-El proyecto aplica varios principios básicos de organización de software:
-
-- separación de responsabilidades,
-- funciones pequeñas y reutilizables,
-- configuración centralizada,
-- rutas centralizadas,
-- ejecución mediante puntos de entrada,
-- reducción de efectos secundarios,
-- automatización de pruebas,
-- reproducibilidad,
-- manejo explícito de errores,
-- control de versiones mediante ramas.
-
----
-
-# Habilidades demostradas
-
-Este proyecto demuestra conocimientos prácticos de:
-
-- Python.
-- pandas.
-- NumPy.
-- limpieza y transformación de datos.
-- análisis exploratorio.
-- SQL.
-- PostgreSQL.
-- integración Python–PostgreSQL.
-- SQLAlchemy.
-- psycopg.
-- creación de KPIs.
-- análisis de negocio.
-- cobertura comercial.
-- reglas de negocio.
-- automatización de reportes.
-- visualización con Matplotlib.
-- variables de entorno.
-- validación de configuración.
-- manejo seguro de credenciales.
-- módulos y paquetes Python.
-- funciones reutilizables.
-- `main()`.
-- `if __name__ == "__main__"`.
-- reducción de efectos secundarios al importar módulos.
-- `pathlib`.
-- gestión centralizada de rutas.
-- entornos virtuales.
-- `try`, `except` y `finally`.
-- manejo de excepciones.
-- liberación de recursos.
-- pruebas automáticas con `unittest`.
-- assertions.
-- `unittest.mock.patch`.
-- `pandas.testing.assert_frame_equal`.
-- mocking de variables de entorno.
-- validación automatizada de calidad de datos.
-- tests de reglas de negocio.
-- tests de reproducibilidad.
-- automatización de pipelines.
-- `subprocess`.
-- `sys.executable`.
-- `time.perf_counter`.
-- códigos de salida de procesos.
-- manejo de fallos entre procesos.
-- orquestación de tareas.
-- integración continua.
-- GitHub Actions.
-- workflows YAML.
-- runners Ubuntu.
-- Git.
-- GitHub.
-- ramas.
-- Pull Requests.
-- merges.
-- refactorización.
-- documentación técnica.
-- separación de responsabilidades.
-- organización de proyectos de datos.
-- reproducibilidad de entornos.
-
----
-
-# Estado del proyecto
-
-El proyecto se encuentra en su **fase final de preparación para portafolio**.
-
-Actualmente cuenta con:
-
-- pipeline completo de datos,
-- generación reproducible de datos sintéticos,
-- escenarios comerciales realistas,
-- almacenamiento en PostgreSQL,
-- análisis SQL,
-- KPIs,
-- cobertura comercial,
-- visualizaciones,
-- reportes automatizados,
-- configuración segura,
-- manejo de errores,
-- arquitectura modular basada en funciones,
-- reducción de efectos secundarios al importar módulos,
-- 15 tests automáticos,
-- tests de generación de datos,
-- tests de reproducibilidad,
-- tests específicos para reglas de cobertura,
-- ejecución integral mediante un solo comando,
-- medición del tiempo de ejecución,
-- integración continua con GitHub Actions,
-- validación automática después de cada `push`,
-- flujo de trabajo basado en ramas y Pull Requests.
-
-Las siguientes mejoras estarán orientadas al cierre definitivo, revisión visual del repositorio y presentación final como proyecto de portafolio.
-
----
-
-# Autor
+# Author
 
 **Kleber Landívar**
 
-Proyecto desarrollado como parte de un portafolio profesional de análisis de datos.
+Data Analytics Portfolio Project
